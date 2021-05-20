@@ -727,7 +727,7 @@ class debug
         $trace = $e->getTraceAsString();
         $trace = str_replace('\\\\', '\\', $trace);
         foreach ($e->getTrace() as $k => $v) {
-            $v['args'] && $args["#{$k}"] = 1 === count($v['args']) ? $v['args'][0] : $v['args'];
+            isset($v['args']) && $args["#{$k}"] = 1 === count($v['args']) ? $v['args'][0] : $v['args'];
         }
         $args_str = isset($args) ? P($args, false) : '';
         if ($log) {
