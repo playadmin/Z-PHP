@@ -4,7 +4,7 @@ use z\router;
 use z\z;
 function AppRun($entry)
 {
-    define('ZPHP_VER', '4.1.1');
+    define('ZPHP_VER', '4.2.0');
     error_reporting(E_ALL);
     $core = str_replace('\\', '/', __DIR__);
     $p = explode('/', $core);
