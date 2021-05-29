@@ -197,6 +197,7 @@ class view
         2 < $GLOBALS['ZPHP_CONFIG']['DEBUG']['level'] && debug::setMsg(1140, $tpl);
         isset(self::$TAG) || self::$TAG = [
             'php' => $GLOBALS['ZPHP_CONFIG']['VIEW']['php_tag'] ?? 'php',
+            'custom' => $GLOBALS['ZPHP_CONFIG']['VIEW']['custom_tags'] ?? null,
             'import' => $GLOBALS['ZPHP_CONFIG']['VIEW']['import_tag'] ?? 'import',
             'template' => $GLOBALS['ZPHP_CONFIG']['VIEW']['template_tag'] ?? 'template',
         ];
@@ -221,6 +222,11 @@ class view
                     self::compressJavaScript($dom, $compress[2] ?? $compress);
                 }
                 self::replacePHP($dom);
+                if (self::$TAG['custom']) {
+                    foreach(self::$TAG['custom'] as $name=>$cfg) {
+                        self::replaceCustomTag($dom, $name, $cfg);
+                    }
+                }
                 $html = $dom->saveHTML();
                 $html = str_replace($flag, '', $html);
                 $html = self::replaceDecode($html);
@@ -408,6 +414,36 @@ class view
                 $new = $dom->createProcessingInstruction('php', "{$t->nodeValue};?");
                 $parent->insertBefore($new, $t);
             }
+            $parent->removeChild($t);
+        }
+    }
+    private static function replaceCustomTag($dom, string $name, array $cfg)
+    {
+        $tags = $dom->getElementsByTagName($name);
+        foreach($tags as $t) {
+            $action = $t->getAttribute('action');
+            $var = $t->getAttribute('var');
+            if (!$action && !$action = $cfg[1]) {
+                throw new \Exception("自定义标签缺少action属性");
+            }
+            if (!$var && !$var = $cfg[2]) {
+                throw new \Exception("自定义标签缺少var属性");
+            }
+            $args = $t->getAttribute('args') ?: '';
+            $parent = $t->parentNode;
+            $code = strstr($var, ',') ? "list({$var})" : $var;
+            if ($cfg[0]) {
+                if (!method_exists($cfg[0], $action)) {
+                    throw new \Exception("自定义标签的方法不存在: {$cfg[0]}::{$action}");
+                }
+                $code .= "={$cfg[0]}::{$action}({$args});?";
+            } elseif (is_callable($action)) {
+                $code .= "={$action}({$args});?";
+            } else {
+                throw new \Exception("自定义标签的方法不存在: {$action}");
+            }
+            $new = $dom->createProcessingInstruction('php', $code);
+            $parent->insertBefore($new, $t);
             $parent->removeChild($t);
         }
     }
