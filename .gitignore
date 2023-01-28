@@ -1,0 +1,10 @@
+/public/nginx.htaccess
+/public/.htaccess
+
+/tmp/*
+/新建文件夹*
+!index.html
+
+*副本*
+*.bak
+*.zip
