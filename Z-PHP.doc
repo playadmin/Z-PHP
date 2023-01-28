@@ -1,0 +1,1257 @@
+<html xmlns:v="urn:schemas-microsoft-com:vml"
+    xmlns:o="urn:schemas-microsoft-com:office:office"
+    xmlns:w="urn:schemas-microsoft-com:office:word"
+    xmlns="http://www.w3.org/TR/REC-html40">
+    <head><meta http-equiv=Content-Type content="text/html; charset=utf-8">
+    <style type="text/css">
+        table  
+        {  
+            border-collapse: collapse;
+            border: none;  
+            width: 100%;  
+        }  
+        td,tr  
+        {  
+            border: solid #CCC 1px;
+            padding:3px;
+            font-size:9pt;
+        } 
+        .codestyle{
+            word-break: break-all;
+            mso-highlight:rgb(252, 252, 252);
+            padding-left: 5px; background-color: rgb(252, 252, 252); border: 1px solid rgb(225, 225, 232);
+        }
+        img {
+            width:100;
+        }
+    </style>
+    <meta name=ProgId content=Word.Document>
+    <meta name=Generator content="Microsoft Word 11">
+    <meta name=Originator content="Microsoft Word 11">
+    <xml><w:WordDocument><w:View>Print</w:View></xml></head>
+    <body><h1>1、开始</h1><div style="margin-left:20px;"><h1>Z-PHP框架v3.0 文档</h1>
+<blockquote>
+<p><font color=red>!2.0开始不再支持PHP7之前的版本
+Z-PHP框架 目前由我个人开发和维护，所有喜欢的PHPer都可以使用。
+框架本身不存在任何后门或是收集、统计信息之类的代码。
+欢迎大家使用并提出改进意见，QQ交流群：592429541</font></p>
+</blockquote>
+<h2>一些规范：</h2>
+<ol>
+<li>大小写：没有强制要求，建议目录和控制器类名全部使用小写。</li>
+<li>控制器名：xxx.class.php。</li>
+</ol>
+<h2>目录权限：</h2>
+<p>/rundir 应该拥有写权限，框架在此目录下存放模板编译文件，缓存文件，日志文件
+文件上传目录 同样需要写入权限
+通过程序保存配置信息之类的目录或文件也需要写入权限
+其他目录及文件根据需求，无必要的情况下应该禁止写入权限</p>
+<h2>开始使用：</h2>
+<ol>
+<li>下载程序文件解压后，将 core 目录复制到网站根目录外层，以网站根目录是 /htdocs/public_html 为例core就放在/htdocs 目录下。</li>
+<li>
+<p>在/htdocs/public_html 目录下建立入口文件 index.php，内容如下：</p>
+<table width='100%' class='codestyle'><pre><code><?php
+    define('IN',str_replace('\\','/',dirname(__FILE__)) . '/');        //定义http请求的根目录
+    define('APP_PATH','home');                                    //定义应用目录名称
+    define('DEBUG',1);                                            //开启debug
+    define('ERROR_LOG','php_error_log');                        //错误日志目录:rundir目录下
+    require('../core/core.php');                                  //加载框架
+    \z\z::start();</code></pre></table>
+</li>
+<li>在浏览器访问刚才建立的入口文件，成功的话会显示欢迎信息并且程序会自动建立项目目录结构。详见目录结构。
+应用目录就是入口文件定义的home，欢迎信息就是/htdocs/home/controller/index.class.php 控制器输出的。</li>
+</ol>
+<blockquote>
+<p><font color=red>关于目录结构
+之所以将程序文件放在站点根目录之外主要是处于安全问题的考虑
+这样用户就访问不到 public_html 目录之外的内容
+而 public_html 目录下就只有入口文件和网站的静态资源文件，如css,image,js 等等
+如果你是用虚拟主机不能指定站点的根目录，请参考以下配置</font></p>
+</blockquote>
+<p>core就放在站点根目录下
+在站点根目录下建立入口文件 index.php，内容如下</p>
+<table width='100%' class='codestyle'><pre><code><?php
+    define('RES_PATH','public_html');                     //定义资源文件的目录
+    define('APP_PATH','home');                            //定义应用目录名称
+    define('DEBUG',1);                                    //开启debug
+    require('./core/core.php');                           //加载框架（注意这里的路径）
+    \z\z::start();</code></pre></table></div><h1>2、目录结构</h1><div style="margin-left:20px;"><h2>core  核心目录</h2>
+<p>├─init  框架初始化所需文件目录
+│ &nbsp;&nbsp;&nbsp;&nbsp;├─config.php           //框架初始化用到的配置文件
+│ &nbsp;&nbsp;&nbsp;&nbsp;├─functions.php   //框架初始化用到的函数
+│ &nbsp;&nbsp;&nbsp;&nbsp;└─mapping.php     //框架初始化用到的映射文件
+├──lib  核心类库
+│ &nbsp;&nbsp;&nbsp;&nbsp;├───z      基本类库目录
+│ &nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;├─controller.class.php   //控制器类
+│ &nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;├─debug.class.php        //调试信息类
+│ &nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;├─sql.class.php          //数据模型抽象类
+│ &nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;├─db.class.php           //PDO模型
+│ &nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;├─view.class.php         //视图类
+│ &nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;├─rote.class.php         //路由类
+│ &nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;└─z.class.php            //框架核心类
+│ &nbsp;&nbsp;&nbsp;&nbsp;└──ext      核心扩展类库
+│ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ttfs      验证码用的字体文件目录
+│ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─verimg.class.php      //验证码类
+│ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─upload.class.php   //文件上传类
+│ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─verify.class.php      //自动验证类
+├──tpl  核心模板文件目录
+│ &nbsp;&nbsp;&nbsp;&nbsp;├─debug.tpl
+│ &nbsp;&nbsp;&nbsp;&nbsp;└─jump.tpl
+│ &nbsp;&nbsp;&nbsp;&nbsp;└─404.tpl
+│ &nbsp;&nbsp;&nbsp;&nbsp;└─500.tpl
+└─core.php   //核心文件</p>
+<h2>建议的项目目录结构</h2>
+<p>项目根目录
+├─core    框架核心目录
+├─common  公共程序文件目录
+│&nbsp;&nbsp;&nbsp;&nbsp;├─lib       公共类库目录
+│&nbsp;&nbsp;&nbsp;&nbsp;├─model       公共模型目录
+│&nbsp;&nbsp;&nbsp;&nbsp;├─config.php      公共配置文件
+│&nbsp;&nbsp;&nbsp;&nbsp;├─functions.php    //公共函数
+│&nbsp;&nbsp;&nbsp;&nbsp;└─mapping.php      //公共映射文件
+├──home  应用目录
+│&nbsp;&nbsp;&nbsp;&nbsp;├─controller  控制器目录
+│&nbsp;&nbsp;&nbsp;&nbsp;├─model       模型目录
+│&nbsp;&nbsp;&nbsp;&nbsp;├─common      公共目录
+│&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;├─config.php      配置文件
+│&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;├─functions.php      函数文件
+│&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;└─mapping.php        映射文件
+│&nbsp;&nbsp;&nbsp;&nbsp;└─view        视图目录
+│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─default        模板目录
+├─public_html  网站根目录
+│&nbsp;&nbsp;&nbsp;&nbsp;├─public   公共目录
+│&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;└─uploads   文件上传目录
+│&nbsp;&nbsp;&nbsp;&nbsp;├─res      网站资源文件目录
+│&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;└─home  对应的应用目录
+│&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─default  对应的模板目录
+│&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─css
+│&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─js
+│&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─images
+│&nbsp;&nbsp;&nbsp;&nbsp;└─index.php   入口文件
+└─rundir       运行目录/临时文件</p></div><h1>3、配置文件</h1><div style="margin-left:20px;"><h2>加载顺序</h2>
+<ol>
+<li>首先加载 core/init/config.php</li>
+<li>然后加载 common/config.php</li>
+<li>再加载 home/common/config.php</li>
+<li>如果多个配置文件存在相同的配置项，则后加载的会覆盖前面加载的配置项</li>
+</ol>
+<h2>配置说明</h2>
+<table width='100%' class='codestyle'><pre><code><?php
+    return [
+    /*核心配置*/
+    'THEME_SUFFIX'     =>    '.html',      //模板文件的后缀
+    'URL_MOD'          =>    1,            //URL模式（0：默认模式，1：PathInfo模式，2：路由模式）
+    'VIEW_PREFIX'      =>    '<{',         //模板文件中的左定界符
+    'VIEW_SUFFIX'      =>    '}>',         //模板文件中的右定界符
+    'PATHINFO_SUFFIX'  =>   '.htm',     //pathinfo模式url的后缀名
+
+    /*缓存方式*/
+    'CACHE_MOD' =>  0,  //缓存方式 0:file,1:redis,2:memcached
+
+    /*数据库配置*/
+    'DB_HOST'          =>    '127.0.0.1',  //数据库地址
+    'DB_PORT'          =>    '3306',       //数据库端口，默认3306
+    'DB_NAME'          =>    'zphp',       //数据库名
+    'DB_USER'          =>    'root',       //数据库用户名
+    'DB_PASS'          =>    'root',       //数据库密码
+    'DB_PREFIX'        =>    'zphp_',      //数据表的前缀
+    'DB_CHARSET'      =>    'utf8',     //字符集
+
+    /*redis*/
+    'REDIS_HOST' => '127.0.0.1',     //地址
+    'REDIS_PORT' => 6379,           //端口
+    'REDIS_TIMEOUT' => 1,           //超时时间（秒）
+    'REDIS_PASS' => null,           //连接密码
+    'REDIS_DB' => 1,                 //要操作的库
+
+    /*memcached*/
+    'MEMCACHED'=>[
+        ['127.0.0.1','11211'],
+        ['127.0.0.2','11211'],
+        // ...更多服务器
+    ],
+
+    /*session存储方式：0:文件，1:redis*/
+    'SESSION_MOD'=>0,
+
+    /*其它*/
+    'THEME'            =>    'default',    //应用的模板目录
+    'ROUTE_ON'         =>   false,        //是否开启路由
+    'ROUTE_DELIMIT' =>  '-',          //路由分隔符
+    'HTML_COMMPRESS'   =>    false,        //是否压缩html代码
+    'AUTO_MOBILE'      =>    'mobile',     //如果有值（例如'mobile'）则自动检测移动端，若是就将模板目录设为mobile
+];</code></pre></table></div><h1>4、常量</h1><div style="margin-left:20px;"><h2>系统常量（绝对路径）</h2>
+<table width='100%' class='codestyle'><pre><code>ROOT            /                                项目根目录
+IN              /public_html/                     入口文件的目录
+LIB             /core/lib/                        核心类库
+INIT            /core/init/                       核心初始化文件目录（配置文件，函数库等）
+APP             /home/                            应用目录
+MODEL           /home/model/                      用户自定义模型目录
+VIEW            /home/view/                       视图目录
+THEME           /home/view/default/               模板目录
+PUB             /public_html/public/              公共目录
+RUN_DIR         /rundir/                          运行目录
+RUN_APP         /rundir/home/                     编译目录
+CACHE_DIR       /rundir/cache/                    缓存目录
+RES             /public_html/res/home/default/    资源文件目录
+COMMON          /common/                          公共目录</code></pre></table>
+<h2>相对路径（相对于域名根）</h2>
+<table width='100%' class='codestyle'><pre><code>__ROOT__            /                     （http请求的根目录）
+__PUBLIC__          /public
+__RES__             /res/home/default</code></pre></table>
+<h2>其它</h2>
+<table width='100%' class='codestyle'><pre><code>DEBUG                       是否开启调试模式
+APP_PATH                    当前应用的目录名称
+CONTROLLER_NAME             当前控制器名称
+ACTION_NAME                 当前操作名
+NOW_TIME                    当前时间戳
+IS_POST                     是否POST请求
+IS_GET                      是否GET请求
+IS_AJAX                     是否Ajax请求
+IS_MOBILE                   是否是移动端请求（配置了"AUTO_MOBILE"才可用）
+PHP_FILE                    请求的php文件
+VERSION                     框架版本号</code></pre></table></div><h1>5、视图</h1><div style="margin-left:20px;"><h3>文件路径：</h3>
+<p>默认的模板文件路径是：应用目录/view/配置文件的THEME/控制器名/；例如：/home/view/default/index/</p>
+<h3>文件名：</h3>
+<p>默认模板文件名是：当前操作名.html；例如：index.html</p>
+<h3>后缀名：</h3>
+<p>模板文件的后缀名可以在配置文件中自定义 "THEME_SUFFIX"</p>
+<h3>定界符：</h3>
+<p>默认使用尖括号大括号作为定界符；可以在配置文件中自定义。例如：<{$value}>
+不推荐单纯使用大括号{ }作为定界符，不注意的话可能会和html中的js代码产生冲突</p>
+<h3>模板文件包含：</h3>
+<table width='100%' class='codestyle'><pre><code><{include common/header.html}>
+<{include default/index/show.html}> ：模板目录/子目录/文件
+<{include public/view/common/head.html}>  ：从根目录开始的相对路径</code></pre></table>
+<p>包含文件支持使用几种路径常量：ROOT,APP,COMMON,VIEW,THEME,RES,PUB 例如：</p>
+<table width='100%' class='codestyle'><pre><code><{include THEME/index/show.html}></code></pre></table>
+<blockquote>
+<p><font color=red>非debug模式下不检查模板包含文件是否更新
+如果你修改了模板的包含文件需要手动删除rundir下的应用目录以便重新生成模板编译文件。</font></p>
+</blockquote>
+<h3>路径常量的替换</h3>
+<table width='100%' class='codestyle'><pre><code><link rel="stylesheet" href="__RES__/css/global.css">           __RES__ 会被替换成 /res/home/default
+<link rel="stylesheet" href="__PUBLIC__/css/global.css">        __PUBLIC__ 会被替换成 /public
+<link rel="stylesheet" href="__ROOT__/css/global.css">          __ROOT__ 会被替换成空（如果是根目录的话）</code></pre></table>
+<h3>显示变量</h3>
+<table width='100%' class='codestyle'><pre><code><div>
+    <h1><{$user['username']}></h1>
+    <h2><{$user['sex']||'保密'}></h2>        //如果没有$user['sex']就显示后面的'保密'
+    <h2><{$user['sex']?:'保密'}></h2>        //如果没有$user['sex']就显示后面的'保密'
+</div></code></pre></table>
+<h3>if判断</h3>
+<table width='100%' class='codestyle'><pre><code><h1><{if $user['username']}> <{$user['username']}> <{/if}> </h1>
+<h1><{if $user['username']}> <{$user['username']}> <{else}> 匿名用户 <{/if}> </h1>
+<h1><{if $user['username']}> <{$user['username']}> <{elseif $user['nickname']}> <{$user['nickname']}> <{/if}></h1></code></pre></table>
+<h3>foreach 循环</h3>
+<table width='100%' class='codestyle'><pre><code><ul>
+    <{foreach $users as $key=>$value}>
+        <li><{$value['username']}></li>
+    <{/foreach}>
+</ul></code></pre></table>
+<h3>for 循环</h3>
+<table width='100%' class='codestyle'><pre><code><ul>
+    <{for $i=0;$i<10;$i++}>
+        <li><{$arr[$i]}></li>
+    <{/for}>
+</ul></code></pre></table>
+<h3>while 循环</h3>
+<table width='100%' class='codestyle'><pre><code><ul>
+    <{while $i<10}>
+        <li><{$arr[$i++]}></li>
+    <{/while}>
+</ul></code></pre></table>
+<blockquote>
+<p>各循环中可以正常使用 <{break}> 和 <{ continue}></p>
+</blockquote>
+<h3>使用函数</h3>
+<p>在函数名前面加冒号：</p>
+<table width='100%' class='codestyle'><pre><code><{:date('Y-m-d',$time)}></code></pre></table></div><h1>6、控制器</h1><div style="margin-left:20px;"><h2>命名：</h2>
+<p>控制器名.class.php 例如： index.class.php
+没有对名称的大小写做限制，因此要特别注意 Linux 下的大小写问题；<strong>建议全部使用小写</strong></p>
+<blockquote>
+<p><font color=red>注意控制器的命名空间和继承</font></p>
+</blockquote>
+<table width='100%' class='codestyle'><pre><code><?php
+    namespace c;           //命名空间是 c
+    use \z\controller;     //导入controller类
+    class index extends controller{             //定义index控制器继承controller类
+        static function index(){                //index操作
+            echo '欢迎使用Z-php框架';
+        }
+    }</code></pre></table>
+<blockquote>
+<p><font color=red>2.0版本开始控制器的操作全部采用【<strong>静态方法</strong>】实现，全部控制器操作名均由 <strong>static</strong> 修饰</font></p>
+</blockquote>
+<h2>url访问规则：</h2>
+<p>上面所示的控制器操作的url：/index.php?c=index&a=index
+url中的参数 c 就是<strong>控制器名</strong>，a 就是<strong>操作名</strong>
+控制器名和操作名是 index 的url中可以省略，因此 /index.php 实际访问的就是index控制器和index操作</p>
+<h2>分配变量和渲染模板</h2>
+<table width='100%' class='codestyle'><pre><code><?php
+    namespace c;
+    use \z\controller;
+    class index extends controller{
+        static function index(){
+            $str = '欢迎使用Z-php框架';
+            parent::assign('str',$str);        //向模板文件分配$str变量
+            parent::display();                 //渲染模板
+        }
+    }</code></pre></table>
+<h2>视图中的方法：</h2>
+<table width='100%' class='codestyle'><pre><code>parent::assign('a',$b);    //将$b分配到模板中的变量$a中
+parent::display('index');  //渲染当前模板目录下 index（当前控制器名）目录下的名为 index.html 的模板文件
+parent::display();         //参数为空默认渲染  当前模板目录/控制器名/操作名.html文件
+parent::fetch('index')     //返回渲染index模板的字符串结果（不向浏览器输出）
+parent::json($arr)         //输出Json数据</code></pre></table>
+<h2>display()的参数：</h2>
+<p>1)：绝对路径， display('/wwwroot/web/home/view/default/index/index.html')</p>
+<p>2)：文件名或方法名， display('index.html')</p>
+<p>3)：控制器名/文件名或方法名，display('index/index')</p>
+<p>4)：模板目录名/控制器名/文件名或方法名，display('wap/index/index')</p>
+<p>5)：应用名/模板目录名/控制器名/文件名或方法名，display('admin/default/index/index')</p>
+<p>6)：从ROOT开始写的模板文件路径，display('home/view/default/index/index.html')</p>
+<h2>跳转和重定向：</h2>
+<table width='100%' class='codestyle'><pre><code> parent::success('操作成功');                   //提示 操作成功（默认1秒后跳转到之前页面）
+ parent::success('操作成功','/index.php',2);    //提示 操作成功，2秒钟后跳转到index.php
+ parent::error('操作失败');                     //提示 操作失败（默认3秒后跳转到之前页面），参数2和参数3同success()
+ parent::redirect('/index.php');               //重定向到 /index.php</code></pre></table>
+<blockquote>
+<p><font color=red>success() 和 error()  自动判断当前的请求是否是Ajax请求，如果是Ajax请求则返回Json数据，格式如下：</font></p>
+</blockquote>
+<table width='100%' class='codestyle'><pre><code>{"status":成功是1失败为0,  "info":"提示信息",  "url":"跳转的url参数"}</code></pre></table>
+<p><strong>关于跳转的模板文件：</strong>
+优先使用 应用模板目录下的 jump.tpl 文件
+默认使用 core/tpl/jump.tpl 文件</p>
+<h2>前置操作：</h2>
+<p><strong>如果控制器中存在 init() 方法，则先执行 init() 操作，之后再执行指定操作</strong></p>
+<table width='100%' class='codestyle'><pre><code><?php
+namespace c;
+use \z\controller;
+class common extends controller{
+    static function init(){        //先执行的操作
+        if(empty($_SESSION['user'])) parent::redirect('/index.php?c=login&a=index');
+    }
+}</code></pre></table>
+<h2>后置操作：</h2>
+<p><strong>如果控制器中存在 after() 方法，执行完指定操作后会接着执行 after() 操作</strong></p>
+<table width='100%' class='codestyle'><pre><code><?php
+namespace c;
+use \z\controller;
+class common extends controller{
+    static function after(){
+        //执行完控制器的指定操作之后 执行此操作（其前提是之前操作没有中断脚本）
+    }
+}</code></pre></table>
+<blockquote>
+<p><font color=red>如果控制器操作直接 return 数据的话，则会直接输出Json数据并中断脚本</font></p>
+</blockquote>
+<h2>_404方法</h2>
+<table width='100%' class='codestyle'><pre><code>parent::_404('404.html');    //输出指定的404页面</code></pre></table>
+<p>如果参数为空 默认文件名是：404.html
+如果参数不包含路径，优先输出当前模板目录下的404.html；其次是根目录下的404.html；最后是 /core/tpl/404.tpl</p>
+<blockquote>
+<p><font color=red>非debug模式下：如果控制器类或方法不存在的时候直接输出404页面
+可在控制器中重写此方法实现自定义功能</font></p>
+</blockquote></div><h1>7、上传</h1><div style="margin-left:20px;"><h2>使用核心扩展的upload类</h2>
+<p><strong>支持多文件上传 需在表单中指定不同的 name 名，或 name="file[]"</strong></p>
+<h2>实例化时指定上传参数</h2>
+<table width='100%' class='codestyle'><pre><code>static function upload(){
+    $conf['path'] = PUB . 'uploads/img';            //定义文件上传路径 默认 /public/uploads
+    $conf['allowType'] = array('jpg','gif','png');  //定义允许上传的文件后缀
+    $conf['maxSize'] = 1024*1024;                   //定义允许上传的最大尺寸
+    $up = new \ext\upload($conf);        //实例化上传类
+    $result = $up->upload();        //执行上传
+    $info = $up->getInfo();         //返回上传文件信息，索引数组
+    $err = $up->getError();         //返回错误信息，数组
+}</code></pre></table>
+<blockquote>
+<p><font color=red>注意，$up->upload()方法返回的数据结构将保持表单提交时的结构，键名是input的name值。
+$up->getInfo()方法返回的数据结构是包含所有上传文件的<strong>索引数组</strong>。</font></p>
+</blockquote>
+<h2>实例化之后指定上传参数</h2>
+<table width='100%' class='codestyle'><pre><code>static function upload(){
+    $up = new \ext\upload();
+    $up->set('path', PUB . 'uploads/img');        //定义文件上传路径
+    $up->set('allowType', ['jpg','gif','png']);   //定义允许上传的文件后缀
+    $up->set('maxSize', 1024*1024);               //定义允许上传的最大尺寸
+    $result = $up->upload();                      //执行上传
+    $info = $up->getInfo();                       //返回上传文件信息，索引数组
+    $err = $up->getError();                       //返回错误信息，数组
+}</code></pre></table>
+<h2>可配置参数</h2>
+<table width='100%' class='codestyle'><pre><code>"path"           //上传目录               默认 /public/uploads
+"subPath"        //子目录                 默认无
+"allowType"      //允许的文件后缀【数组】  默认'jpg','gif','png'
+"maxSize"        //允许的最大尺寸【Byte】  默认 1024*1024
+"randName"       //是否随机重命名          默认是</code></pre></table>
+<p><strong>上传目录不是绝对路径时，会在入口文件所在目录建立上传目录</strong></p>
+<blockquote>
+<p><font color=red>多文件上传时，如果某个文件上传出错将导致上传过程退出，如想忽略错误完成上传：</font></p>
+</blockquote>
+<table width='100%' class='codestyle'><pre><code>$result = $up->upload(true);    //传入参数true 忽略个别文件的上传错误</code></pre></table>
+<h2>返回字段说明：</h2>
+<table width='100%' class='codestyle'><pre><code>name        //文件名
+suffix      //后缀名
+originName  //原始文件名
+type        //文件类型
+size        //文件大小【Byte】
+path        //文件的绝对路径
+src         //文件的相对路径</code></pre></table></div><h1>8、自动加载</h1><div style="margin-left:20px;"><blockquote>
+<p><font color=red>框架自动加载是依赖mapping.php文件做 命名空间-路径 的映射 来实现按需加载的</font></p>
+<p><font color=red>当使用的其它SDK包中含有自动加载函数 spl_autoload_register() 时会造成冲突
+解决方法是将SDK包中的 spl_autoload_register() 方法替换为 zautoload()方法。</font></p>
+</blockquote>
+<h2>映射文件的加载顺序：</h2>
+<table width='100%' class='codestyle'><pre><code>core/init/mapping.php
+common/mapping.php
+home/common/mapping.php</code></pre></table>
+<p><strong>如果多个映射文件存在相同的定义那么后加载的会覆盖先加载的定义</strong></p>
+<h2>框架核心所用的映射文件如下：</h2>
+<table width='100%' class='codestyle'><pre><code><?php
+    return [
+        'z' =>  LIB . 'z/',                 //对应路径：core/lib/z/
+        'ext'   =>  LIB . 'ext/',           //对应路径：core/lib/ext/
+        'c' => APP . 'controller/',         //对应路径：当前应用目录/controller/
+    ];</code></pre></table>
+<h2>COMMON目录</h2>
+<table width='100%' class='codestyle'><pre><code><?php
+    return [
+        'm' =>  APP . 'model/',                 //对应路径：应用目录/model/
+        'common'    =>  COMMON . 'model/',      //对应路径：common/model/
+        'lib'   =>  COMMON . 'lib/',            //对应路径：common/lib/
+    ];</code></pre></table>
+<h2>示例</h2>
+<p>例如我们在 /home/model 目录下创建了一个 user.class.php 的类内容如下：</p>
+<table width='100%' class='codestyle'><pre><code><?php
+    namespace m;            //注意这里的命名空间 m 是对应的前面映射文件的 'm'
+    class user{
+        private $name = '张三';
+        function say(){
+            echo '我叫' . $this->name;
+        }
+    }</code></pre></table>
+<p>控制器中就可以直接使用 new \m\user() 来实例化这个类 而不用事先加载这个类文件</p>
+<table width='100%' class='codestyle'><pre><code><?php
+    namespace c;
+    use \z\controller;
+    class index extends controller{
+        static function index(){
+            $m = new \m\user();
+            $m->say();
+        }
+    }</code></pre></table></div><h1>9、路由</h1><div style="margin-left:20px;"><h2>开启路由</h2>
+<ol>
+<li>首先要先在配置文件中开启路由功能：'ROUTE_ON'=>true,</li>
+<li>在配置文件中定义路由规则的分隔符：'ROUTE_DELIMIT'=>'-',</li>
+</ol>
+<h2>规则定义：</h2>
+<p><strong>1. 在入口文件中定义路由规则</strong></p>
+<table width='100%' class='codestyle'><pre><code><?php
+    define('IN',str_replace('\\','/',dirname(__FILE__)) . '/');
+    define('APP_PATH','home');
+    define('DEBUG',1);
+    require('../core/core.php');
+    /*在此位置定义路由规则*/
+    route(['u'=>['user','index','userid']]);
+    route(['my'=>['index','my','id']]);
+    route(['t'=>['user','info','uid','name','age','sex']]);
+    /*定义路由规则结束*/
+    \z\z::start();</code></pre></table>
+<p><strong>2. 单独配置路由规则文件</strong>
+需要在  应用目录/common/ 目录下增加 route.php 文件</p>
+<table width='100%' class='codestyle'><pre><code><?php
+    return [
+            'u'=>['user','index','userid'],
+            'my'=>['index','my','id'],
+            't'=>['user','info','uid','name','age','sex']
+    ];</code></pre></table>
+<blockquote>
+<p><font color=red><strong>规则解释</strong></font></p>
+</blockquote>
+<p><a href="http://xxx.com/index.php/u-12">http://xxx.com/index.php/u-12</a> 将被路由到 <a href="http://xxx.com/index.php?c=user&a=index&userid=12">http://xxx.com/index.php?c=user&a=index&userid=12</a>
+<a href="http://xxx.com/index.php/my-2">http://xxx.com/index.php/my-2</a> 将被路由到 <a href="http://xxx.com/index.php?c=index&a=my&id=2">http://xxx.com/index.php?c=index&a=my&id=2</a>
+<a href="http://xxx.com/index.php/t-1-2-3-4">http://xxx.com/index.php/t-1-2-3-4</a> 将被路由到 <a href="http://xxx.com/index.php?c=user&a=info&uid=1&name=2&age=3&sex=4">http://xxx.com/index.php?c=user&a=info&uid=1&name=2&age=3&sex=4</a></p>
+<p>url解析先按照规则中的键名（u , my , t）匹配
+键值数组中的<strong>前两个值</strong>被依次解析为 <strong>控制器名</strong> 和 <strong>操作名</strong>
+剩余的值被解析为GET参数名
+url中的 -1-2-3-4 将 <strong>按顺序</strong> 对应 GET参数值</p>
+<h2>生成路由模式的URL</h2>
+<blockquote>
+<p><font color=red><strong>如果你不使用U()函数生成路由模式的URL那么可以无视本条信息</strong>
+当配置为路由模式时，会在缓存目录/route/下生成 pregkey.cache 缓存文件
+目的是为了提高路由模式下U()函数的效率
+该缓存文件会在修改了路由配置文件时自动重新生成
+<strong>如果你是在入口文件定义的路由，那么修改路由之后需要手动删除该缓存文件，以便重新生成</strong></font></p>
+</blockquote>
+<p><strong>1. 配置文件 URL_MOD 配置为 2 </strong>
+<strong>2. 或者U()函数参入第三个参数值 2 </strong></p>
+<table width='100%' class='codestyle'><pre><code>例如：U('控制器名/操作名',[参数数组], 2);</code></pre></table>
+<blockquote>
+<p><font color=red><strong>URL_MOD配置为 3 或者 U()函数第三个参数值是 3 将生成伪静态模式的URL</strong>
+伪静态模式下，将省略 index.php 文件名，如果是其它文件名则省略 .php 后缀
+配置伪静态时需注意，可参考以下Nginx下的配置</font></p>
+</blockquote>
+<table width='100%' class='codestyle'><pre><code>location ~* ^/(?!files|res|admin|tmp|public|\.|.+\.(ico|txt)){
+    #上面意思是除了开头是files|res|admin|tmp|public|.或者后缀是ico|txt的
+    rewrite ^/(.+)$ /index.php/$1 last;
+    #全部重写到 /index.php/...
+}</code></pre></table></div><h1>10、图片验证码</h1><div style="margin-left:20px;"><blockquote>
+<p><font color=red>图片验证码 依赖核心扩展类 verimg.class.php</font></p>
+</blockquote>
+<h2>使用方法：</h2>
+<p>访问以下控制器方法会向浏览器输出一张含有字符验证码的的图片</p>
+<table width='100%' class='codestyle'><pre><code>static function ver(){
+    $img = new \ext\verimg();
+    $img->img();
+}</code></pre></table>
+<h2>参数设置：</h2>
+<p>$width; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;//验证码图片的宽度
+$height; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;//验证码图片的高度
+$codeNum; &nbsp;&nbsp;//验证码字符的个数
+$fontSize; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;//字符尺寸</p>
+<table width='100%' class='codestyle'><pre><code>static function ver(){
+    $img = new \ext\verimg($width, $height, $codeNum, $fontSize);
+    $img->img($name);    //将验证码的md5值存入$_SESSION[$name]中，以便后续验证使用；$name可以省略，默认为'_verimgcode'
+}</code></pre></table>
+<h2>执行验证</h2>
+<table width='100%' class='codestyle'><pre><code>static function ver(){
+     $result = \ext\verimg::check($_POST['code'],$name);    //$name 为默认值'_verimgcode'时可省略
+     if($result) echo '验证成功';
+     else echo '验证失败';
+}</code></pre></table></div><h1>11、函数</h1><div style="margin-left:20px;"><h2>1. 生成url</h2>
+<blockquote>
+<p><font color=red><strong>如果是Nginx服务器，可能需要自己配置Nginx的pathinfo模式</strong></font></p>
+</blockquote>
+<p><strong>U('控制器名/操作名',参数数组,url模式)</strong>
+<strong>U(['控制器名','操作名'],参数数组,url模式)</strong>
+url模式 参考配置文件中的 URL_MOD
+下例中url（默认模式将省略 index.php）：/?c=user&a=index&id=1
+pathinfo模式：/index.php/user/index/id/1
+路由模式：/index.php/user-1</p>
+<table width='100%' class='codestyle'><pre><code>$url = U('user/index',['id'=>1]);
+$url = U(['user','index'],['id'=>1]);</code></pre></table>
+<p><strong>其它应用的URL</strong></p>
+<table width='100%' class='codestyle'><pre><code>$url = U('admin.php/user/index',['id'=>1]);</code></pre></table>
+<h2>2. 获取/设置 配置信息</h2>
+<p><strong>C(配置项，值)</strong></p>
+<table width='100%' class='codestyle'><pre><code>$mod = C('URL_MOD');                   //获取 URL_MOD 配置
+C('THEME','red');                      //设置 THEME 配置值为 red（设置模板目录是red）</code></pre></table>
+<h2>3. 设置 DEBUG 模式</h2>
+<p><strong>debug(值)</strong></p>
+<table width='100%' class='codestyle'><pre><code>debug(0);             //关闭DEBUG
+debug(1);             //开启DEBUG</code></pre></table>
+<h2>4. GET & POST 参数取值</h2>
+<p><strong>I(参数名,分隔符)</strong>
+优先取GET，不存在时取POST
+第二个参数作用是 传递类似【&id=1,2,3,4,5】的参数时，参数值将被分割成数组;</p>
+<table width='100%' class='codestyle'><pre><code>$name = I('name');
+$id = I('id',',');</code></pre></table>
+<h2>5. 打印元素</h2>
+<p><strong>P(元素)</strong>
+可打印元素包括 字符串，数组，对象
+当仅需要打印结果的字符串 而 不需要输出到浏览器时可加第二个参数 false</p>
+<table width='100%' class='codestyle'><pre><code>P($user);
+$str = P($user,false);        //获取打印结果的字符串，不输出到浏览器</code></pre></table>
+<h2>6. 设置路由</h2>
+<p><strong>route(array)</strong>
+设置规则详见路由部分</p>
+<blockquote>
+<p><font color=red>route 函数必须在入口文件中使用，其他地方使用无效</font></p>
+</blockquote>
+<table width='100%' class='codestyle'><pre><code>route(['u'=>['user','index','userid']]);</code></pre></table>
+<h2>7. 设置/获取 COOKIE</h2>
+<p><strong>cookie(名称，值，过期时间，路径)</strong></p>
+<table width='100%' class='codestyle'><pre><code>$user = cookie('user');        //获取cookie
+cookie('user',$user,3600);     //设置cookie 超时3600秒</code></pre></table>
+<h2>8. 记录日志</h2>
+<p><strong>_log(日志内容，目录名)</strong>
+日志文件将被保存在 /rundir/目录名/年月日.log</p>
+<table width='100%' class='codestyle'><pre><code>$log = "用户登录失败";
+_log($log,'login');          //日志将被记录在 /rundir/login/20171021.log</code></pre></table>
+<h2>9. 创建目录</h2>
+<p><strong>make_dir($dir,$mode=0755,$recursive=true,$throwErr=false)</strong>
+$dir：创建的路径
+$mode：权限(linux下有效，例如 0755)
+$recursive：是否连续创建
+$throwErr：是否抛出异常</p>
+<table width='100%' class='codestyle'><pre><code>$dir = PUB . 'static/img';
+make_dir($dir); </code></pre></table>
+<h2>10. 删除文件或目录</h2>
+<p><strong>del_dir($dir,$t=false)</strong>
+$dir：路径
+$t：是否删除目录 默认只删除文件不删除目录
+返回删除的数量</p>
+<table width='100%' class='codestyle'><pre><code>$dir = PUB . 'static/img';
+del_dir($dir); </code></pre></table>
+<h2>其它函数请自行查看 functions.php 文件注释</h2></div><h1>12、缓存</h1><div style="margin-left:20px;"><h2>文件缓存</h2>
+<table width='100%' class='codestyle'><pre><code>生存时间为假，则永久有效
+FC($file,$data=null,$t=0);
+// $file:文件名
+// $data:要缓存的数据
+// $t:生存时间
+$data = FC($key); // 获取缓存
+$result = FC($key,$data); // 设置缓存</code></pre></table>
+<h2>redis 缓存</h2>
+<table width='100%' class='codestyle'><pre><code>该方法必须设置生存时间，默认是600秒
+RC($key,$data=null,$t=0);
+// $key:缓存键名
+// $data:要缓存的数据
+// $t:生存时间
+$data = RC($key); // 获取缓存
+$result = RC($key,$data,100); // 设置缓存</code></pre></table>
+<h2>memcached 缓存</h2>
+<table width='100%' class='codestyle'><pre><code>MC($key,$data=null,$t=0);
+// $key:缓存键名
+// $data:要缓存的数据
+// $t:生存时间
+$data = MC($key); // 获取缓存
+$result = MC($key,$data,100); // 设置缓存</code></pre></table>
+<h2>S 方法</h2>
+<p>采用配置文件的 CACHE_MOD 值（0：文件方式，1：redis，2：memcached）</p>
+<table width='100%' class='codestyle'><pre><code>S($cache,$data=null,$time=0);
+// $cache 缓存键名或是文件路径
+// $data 要缓存的数据
+// $time 生存时间
+$data = S($cache); // 获取缓存
+$result = S($key,$data,100); // 设置缓存</code></pre></table></div><h1>13、数据库操作</h1><div style="margin-left:0px;"><h2>13.1、默认页面</h2><div style="margin-left:0px;"><blockquote>
+<p><font color=red> 框架数据模型是基于 PDO 驱动的，记得要开启PHP的PDO支持
+基于数据模型的操作在使用【<strong>数组传参</strong>】时全部都是通过 参数绑定 来实现的
+所以大家应尽量使用数组传参的方式，避免直接执行SQL语句带来的隐患</font></p>
+</blockquote>
+<h1>先看一个示例</h1>
+<p><strong>1.创建数据表</strong></p>
+<blockquote>
+<p><font color=red> !测试时注意修改配置文件的数据表前缀!</font></p>
+</blockquote>
+<table width='100%' class='codestyle'><pre><code>DROP TABLE IF EXISTS `zphp_user`;
+CREATE TABLE `zphp_user`(
+`userid` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+`username` VARCHAR(32) NOT NULL DEFAULT '',
+`password` VARCHAR(32) NOT NULL DEFAULT ''
+)ENGINE=InnoDB  DEFAULT CHARSET=utf8;</code></pre></table>
+<p><strong>2.在model目录下创建 user.class.php</strong></p>
+<blockquote>
+<p><font color=red> 因为继承了db所以直接使用 $this 来操作数据增删改查</font></p>
+</blockquote>
+<table width='100%' class='codestyle'><pre><code><?php
+    namespace m;
+    use \z\db;
+    class user extends db{
+        function adduser(){
+            $user['username'] = '用户名';
+            $user['password'] = md5('登陆密码');
+            $result = $this->add($user);
+            if($result){
+                return 0;
+            }else{
+                return '添加用户失败';
+            }
+        }
+        function edituser(){
+            $where['userid'] = I('userid');
+            if(!$where['userid']){
+                return '缺少参数:userid';
+            }
+            $user['username'] = '修改用户名';
+            $user['password'] = md5('修改登陆密码');
+            $result = $this->where($where)->save($user);
+            if($result){
+                return 0;
+            }else{
+                return '修改用户失败';
+            }
+        }
+    }</code></pre></table>
+<p><strong>3.在controller目录下创建 user.class.php</strong></p>
+<table width='100%' class='codestyle'><pre><code><?php
+    namespace c;
+    use \z\controller;
+    class user extends controller{
+        static function add(){
+            $m = M('user');
+            $result = $m->adduser();
+            if($result){
+                parent::error($result);
+            }else{
+                parent::success();
+            }
+        }
+        static function edit(){
+            $m = M('user');
+            $result = $m->edituser();
+            if($result){
+                parent::error($result);
+            }else{
+                parent::success();
+            }
+        }
+    }</code></pre></table>
+<p><strong>5.通过url访问一下控制器中的两个方法</strong></p>
+<table width='100%' class='codestyle'><pre><code>/xxx.php?c=user&a=add
+/xxx.php?c=user&a=edit&userid=1</code></pre></table>
+<h2>数据库连接配置</h2>
+<p><strong>1.可在 config.php 配置文件中配置如下字段</strong></p>
+<table width='100%' class='codestyle'><pre><code>'DB_HOST' => '127.0.0.1',
+'DB_NAME' => 'db1',
+'DB_USER' => 'root',
+'DB_PASS' => 'root',
+'DB_PORT' => '3306',
+'DB_PREFIX' => 'zphp_', //表名前缀
+'DB_CHARSET' => 'utf8', //字符集
+'DB_CACHEMOD' => 0 //缓存方式</code></pre></table>
+<p><strong>2.也可以在实例化时传入连接配置</strong></p>
+<table width='100%' class='codestyle'><pre><code>$config = [
+    'DB_HOST' => '127.0.0.1',
+    'DB_NAME' => 'db1',
+    'DB_USER' => 'root',
+    'DB_PASS' => 'root',
+    'DB_PORT' => '3306',
+    'DB_PREFIX' => 'zphp_', //表名前缀
+    'DB_CHARSET' => 'utf8', //字符集
+    'DB_CACHEMOD' => 0 //缓存方式
+];
+$m = D('user',$config);</code></pre></table>
+<p><strong>3.多数据库服务器读写分离的配置</strong>
+DB_HOST 配置为数组，第一个为写服务器，其它是只读服务器</p>
+<table width='100%' class='codestyle'><pre><code>'DB_HOST' => ['127.0.0.1','127.0.0.2','127.0.0.3'],
+'DB_NAME' => 'db1',     // 可配置为数组，顺序对应 DB_HOST
+'DB_USER' => 'root',        // 可配置为数组，顺序对应 DB_HOST
+'DB_PASS' => 'root',        // 可配置为数组，顺序对应 DB_HOST
+'DB_PORT' => '3306',        // 可配置为数组，顺序对应 DB_HOST
+'DB_CHARSET' => 'utf8',  // 字符集
+'DB_PREFIX' => 'col_',    // 数据表前缀</code></pre></table>
+<h2>实例化数据模型</h2>
+<p><strong>1. D( ) 函数</strong>
+D('user') 函数直接实例化数据模型，参数 user 是将要操作的数据表名（省略前缀，前缀可在配置文件自定义）
+user 参数可省略，后续操作时可以使用 table('user') 函数来指定</p>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$m = D()->table('user');
+
+//如果需要连接其它数据库可以传入数据库配置：
+$config = [
+    'DB_HOST' => ['127.0.0.1','127.0.0.1'],
+    'DB_NAME' => 'db1',
+    'DB_USER' => 'root',
+    'DB_PASS' => 'root',
+    'DB_PORT' => '3306',
+    'DB_PREFIX' => 'zphp_', //表名前缀
+    'DB_CHARSET' => 'utf8', //字符集
+    'DB_CACHEMOD' => 0 //缓存方式
+];
+$m = D('user',$config);</code></pre></table>
+<p><strong>2. M( ) 函数</strong>
+M('user')函数 作用是实例化用户的自定义模型 user.class.php
+user 对应用户模型的<strong>文件名</strong>以及<strong>类名</strong>和<strong>数据表名</strong>
+用户自定义模型的存放目录是：应用目录/model/ 或者是 根目录下的 common/model/
+优先使用 应用目录下的模型文件，不存在时会到common目录下查找
+如果都不存在 将直接实例化数据模型，也就是等同于D( )函数</p>
+<table width='100%' class='codestyle'><pre><code>$m = M('user');
+
+// 指定某个应用下的模型：
+$m = M('user','admin'); //使用admin应用下的user模型
+
+//传入数据库连接配置：
+$m = M('user',null,$config);</code></pre></table>
+<h2>切换数据表</h2>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+...数据操作;
+$m->table('cart')...       //切换到 cart 表进行其它数据操作</code></pre></table>
+<h2>设置表别名</h2>
+<p>在指定表名之后紧跟着使用 ->alias('name') 来指定该数据表的别名：</p>
+<table width='100%' class='codestyle'><pre><code>$m = D();
+$m->table('user')->alias('a');
+$m = D('user')->alias('u');</code></pre></table>
+<h2>获取错误信息</h2>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+...数据操作
+$err = $m->getError();</code></pre></table>
+<h2>获取最后执行的SQL语句 及 所绑定的参数</h2>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+...数据操作
+$sql = $m->getSql();        //最后执行的sql语句
+$args = $m->getArgs();      //最后执行的sql语句所绑定的参数</code></pre></table>
+<h2>连贯操作</h2>
+<p>数据模型的操作可以使用 -> 操作符依次调用多个方法，例如：</p>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$field = ['id','name','age'];
+$where = ['id >'=>0];
+$user = $m->field($field)->where($where)->limit(20)->select();</code></pre></table>
+<h2>直接执行SQL语句</h2>
+<p><strong>1. 查询数据</strong></p>
+<table width='100%' class='codestyle'><pre><code>$m = D();
+$sql = "SELECT `username` FROM `zphp_user` WHERE `userid` > :userid";
+$bind = [':userid'=>10]; //绑定参数
+$user = $m->queryOne($sql,$bind);        //只取一条数据
+$list = $m->queryAll($sql,$bind);          //取出所有数据</code></pre></table>
+<p><strong>2. 写入数据</strong>
+如果是插入数据将返回插入数据的主键值，没有主键时返回 true
+如果是更新数据将返回受影响的数据行数</p>
+<table width='100%' class='codestyle'><pre><code>$m = D();
+$result = $m->submit($sql,$bind);</code></pre></table>
+<h2>获取所有数据表名</h2>
+<table width='100%' class='codestyle'><pre><code>$m = D();
+$tables = $m->getTables();</code></pre></table>
+<h2>获取表的所有字段</h2>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$fields = $m->getFields();</code></pre></table>
+<h2>直接使用PDO对象</h2>
+<table width='100%' class='codestyle'><pre><code>$pdo = PDO($config) // 支持传入连接参数
+$sql = 'SELECT * FROM `zphp_user`';
+$sth = $pdo->query($sql);
+$list = $sth->fetchAll();</code></pre></table></div><h2>13.2、添加数据</h2><div style="margin-left:0px;"><h2>数据添加 返回主键值（存在主键时），或者 true/false</h2>
+<h2>1. add($array)</h2>
+<p>add( ) 方法会首先检查自定义的自动验证规则
+如果验证失败则可通过 $m->getError() 来获取错误信息
+自动验证的使用请参照自动验证章节</p>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$info = ['name'=>'张三','age'=>'18','sex'=>'男'];    //准备数据（数组键名对应数据表的字段名）
+$m->add($info);                                  //插入数据
+
+$m = M('user');
+$info = ['name'=>'张三','age'=>'18','sex'=>'男'];    //准备数据（数组键名对应数据表的字段名）
+$m->add($info);       //插入数据（存在用户自定义模型并且定义了验证规则时执行自动验证）</code></pre></table>
+<h2>2. insert($array)</h2>
+<p>insert( ) 方法直接插入数据不验证规则</p>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$info = ['name'=>'张三','age'=>'18','sex'=>'男'];    //准备数据（数组键名对应数据表的字段名）
+$m->insert($info);                                //插入数据</code></pre></table>
+<h2>3. ifInsert($add,$update=null,$safe=true)</h2>
+<blockquote>
+<p><font color=red>有则更新，无则插入（该操作不执行自动验证，请自行检查数据合法性）
+请务必确保数据在表中的唯一性</font></p>
+</blockquote>
+<p>该操作实际是执行的 INSERT INTO ... ON DUPLICATE KEY UPDATE ... 语句
+参数 $add：要增加的数据，$update：要更新的数据，$safe：是否安全过滤
+返回：0：既没增加也没更新，-1：更新了数据，大于0时：增加了数据返回的主键id</p>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$info = ['id'=>10,name'=>'张三','age'=>'18','sex'=>'男'];    //准备数据（数组键名对应数据表的字段名）
+$m->ifInsert($info); //有id是10的数据时就更新此条数据，否则就插入</code></pre></table>
+<blockquote>
+<h2><font color=red>安全过滤</h2>
+<p>安全过滤实际是执行的PHP函数 htmlspecialchars();
+如有需要可以取出数据后通过htmlspecialchars_decode()来转换
+<strong>第二个参数 false 程序不进行安全过滤，默认是 true 执行安全过滤</strong></font></p>
+</blockquote>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$info = ['name'=>'张三','age'=>'18','sex'=>'男'];    //准备数据（数组键名对应数据表的字段名）
+$m->add($info,false);                             //插入数据（不执行安全过滤）</code></pre></table></div><h2>13.3、删除数据</h2><div style="margin-left:0px;"><h2>数据删除 delete() 返回受影响的数据行数</h2>
+<h3>1. where 条件指定删除</h3>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$where = ['id'=>10];                  //where 条件指定要删除的数据
+$m->where($where)->delete();</code></pre></table>
+<h3>2. 删除所有记录</h3>
+<p><strong>默认没有 where 条件的情况下将不执行删除操作，以免误删</strong>
+<strong>确实需要删除整个表的所有记录时需要传入参数 ALL</strong></p>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$m->delete('ALL');         //传入参数 ALL 来删除所有数据</code></pre></table>
+<h3>3. 多表删除</h3>
+<blockquote>
+<p><font color=red>该操作必须是要删除的表中都存在符合条件的记录才会执行成功</font></p>
+</blockquote>
+<table width='100%' class='codestyle'><pre><code>$m = D();
+$where = ['a.id'=>1,'b.id'=>2,'c.id'=>3];
+$m->table('user a,bill b,info c')->where($where)->delete('a,b,c');
+//按where条件删除a,b,c表的相关数据     </code></pre></table>
+<h3>4. 多表关联删除</h3>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$where = ['a.id'=>10];
+$join = 'LEFT JOIN cart b ON a.id=b.userid';
+$m->alias('a')->join($join)->where($where)->delete('a,b');    //删除a表和b表的关联数据</code></pre></table></div><h2>13.4、更新数据</h2><div style="margin-left:0px;"><h2>数据更新 返回受影响行数</h2>
+<h2>1. save($arr)</h2>
+<p>save( ) 方法会首先检查自定义的自动验证规则
+如果验证失败则可通过 $m->getError() 来获取错误信息
+自动验证的使用请参照自动验证章节</p>
+<table width='100%' class='codestyle'><pre><code>$m = M('User');
+$where = ['id'=>10];                                 //where 条件指定要修改的数据
+$info = ['name'=>'张三','age'=>'18','sex'=>'男'];     //准备数据（数组键名对应数据表的字段名）
+$m->where($where)->save($info);    //修改数据（存在用户自定义模型并且定义了验证规则时执行自动验证）</code></pre></table>
+<h2>2. update($arr)</h2>
+<p>update( ) 直接更新数据，不验证规则
+如果验证失败则可通过 $m->getError() 来获取错误信息
+自动验证的使用请参照自动验证章节</p>
+<table width='100%' class='codestyle'><pre><code>$m = M('User');
+$where = ['id'=>10];                                 //where 条件指定要修改的数据
+$info = ['name'=>'张三','age'=>'18','sex'=>'男'];     //准备数据（数组键名对应数据表的字段名）
+$m->where($where)->update($info);                    //修改数据（不执行自动验证）</code></pre></table>
+<h2>3. 需要使用字段值的情况：</h2>
+<table width='100%' class='codestyle'><pre><code>$m = D('User');
+$where = ['id'=>10];
+$info = ['age'=>'{age}+8'];     //被{}包裹的age代表使用该字段自身的值
+$m->where($where)->save($info); </code></pre></table>
+<blockquote>
+<h2><font color=red>安全过滤</h2>
+<p><strong>参照数据添加</strong>
+save()或update()传入第二个参数 false 程序不进行安全过滤，默认是 true 执行安全过滤</font></p>
+</blockquote>
+<h2>4. 单独更新某一字段 setField($name,$value)</h2>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$where = ['id'=>10];
+$m->where($where)->setField('age',18);      //将 age 字段值设为 18</code></pre></table>
+<h2>5. 字段自增，自减，自乘以，自除以</h2>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$where = array('id'=>10);
+$m->where($where)->setInc('age');        //'age'字段的值+1
+$m->where($where)->setInc('age',8);      //'age'字段的值+8
+$m->where($where)->setDec('age');        //'age'字段的值-1
+$m->where($where)->setDec('age',8);      //'age'字段的值-8
+$m->where($where)->setMul('age');        //'age'字段的值乘2
+$m->where($where)->setMul('age',8);      //'age'字段的值乘8
+$m->where($where)->setDiv('age');        //'age'字段的值除2
+$m->where($where)->setDiv('age',8);      //'age'字段的值除8</code></pre></table>
+<h2>6. ifInsert()</h2>
+<blockquote>
+<p><font color=red>有则更新无则添加，详见数据添加</font></p>
+</blockquote></div><h2>13.5、查询数据</h2><div style="margin-left:0px;"><h2>1. 单条数据查询 find()</h2>
+<p>默认返回一维数组：</p>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$where['id'] = 1;
+$user = $m->where($where)->find();</code></pre></table>
+<p>查询某一字段的值：</p>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$where['id'] = 1;
+$username = $m->where($where)->find('username');    //返回 username 字段的值 （字符串）</code></pre></table>
+<h2>2. 多条数据查询：</h2>
+<p>默认返回二维数组</p>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$where['id >'] = 1;
+$user = $m->where($where)->select();</code></pre></table>
+<p>查询某一字段的值：</p>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$where['id >'] = 1;
+$username = $m->where($where)->select('username');    //返回 username 字段的值 （一维数组）</code></pre></table>
+<h2>3. 指定返回字段</h2>
+<p>field($field)
+$field：数组或字符串
+$field  为索引数组时返回对应数组值的字段
+$field  为关联数组时返回对应数组键名的字段，字段名被转为数组键值（指定字段别名）
+$field  为字符串时将保持原样，框架不做解析</p>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$where['id >'] = 1;
+$field = ['id','username','age'];      //指定只返回 id,username,age 字段
+$user = $m->field($field)->where($where)->select();</code></pre></table>
+<p><strong>指定所返回字段的别名：</strong></p>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$where['id >'] = 1;
+$field = ['id','username'=>'name','age'];      //指定 username 字段返回的别名是 name
+$user = $m->field($field)->where($where)->select();</code></pre></table>
+<p><strong>返回除了某字段之外的所有字段：</strong></p>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$field = ['EXCEPT'=>'username,age'];      //使用 EXCEPT 排除字段
+$field = ['EXCEPT'=>'username,age','code'=>'usercode'];     //排除 `username`和`age` 字段 并且将`code`字段转成 usercode
+$user = $m->field($field)->where($where)->select();</code></pre></table>
+<p><del><strong>使用函数</strong></del></p>
+<blockquote>
+<p><font color=red><strong>数组中使用函数的写法后期可能会取消，大家慎用，复杂查询的方法见本页末尾</strong></font></p>
+</blockquote>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$where['id >'] = 1;
+$field = ['SUM(point)'=>'totalpoint'];      //point 字段求和并指定返回别名是 totalpoint
+$user = $m->field($field)->where($where)->select();</code></pre></table>
+<h2>4. 设置返回数据条数</h2>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$user = $m->limit(10)->select();
+$user = $m->limit(6,10)->select();</code></pre></table>
+<h2>5. 设置排序方式</h2>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$user = $m->order('id')->select();               //按 `id` 字段排序
+$user = $m->order('id DESC')->select();          //按 `id` 字段降序排序</code></pre></table>
+<h2>6. 统计查询</h2>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$user = $m->where($where)->count();     //返回符合条件的数据总数
+$user = $m->sum('point');               //point 字段求和
+$user = $m->max('point');               //point 字段的最大值
+$user = $m->min('point');               //point 字段的最小值
+$user = $m->avg('point');               //point 字段的平均值</code></pre></table>
+<h2>7. 数据分组</h2>
+<table width='100%' class='codestyle'><pre><code>$user = $m->group('username')->select();    //按 username 字段分组</code></pre></table>
+<h2>8. 聚合条件</h2>
+<p><strong>having 条件使用方法同 where 条件，详情请参照 where 条件</strong></p>
+<table width='100%' class='codestyle'><pre><code>$having = ['point >'=>100];
+$user = $m->group('username')->having($having)->select();
+$having = ['point >'=>100,'status'=>1];
+$user = $m->group('username')->having($having)->select();</code></pre></table>
+<h2>9. 关联查询</h2>
+<p>默认是 RIGHT JOIN：</p>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$where['a.id'] = 1;
+$join = 'group b ON a.groupid=b.groupid';    //关联 group 表查询
+$list = $m->alias('a')->join($join)->where($where)->select();</code></pre></table>
+<p>指定 JOIN 类型：</p>
+<table width='100%' class='codestyle'><pre><code>$join = 'LEFT JOIN group b ON a.groupid=b.groupid';    //LEFT 关联</code></pre></table>
+<p>多个 JOIN 条件：</p>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$where['a.id'] = 1;
+$join[] = 'LEFT JOIN group b ON a.groupid=b.groupid';
+$join[] = 'LEFT JOIN cart c ON c.uid=a.id';
+/*...更多JOIN;*/
+$list = $m->alias('a')->join($join)->where($where)->select();</code></pre></table>
+<h2>10. 事务处理</h2>
+<blockquote>
+<p><font color=red>务必注意存储引擎是否支持事务处理!</font></p>
+</blockquote>
+<p>begin() 开始事务
+commit() 提交事务
+rollback() 回滚事务</p>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+try{
+    $m->begin();         //开始事务处理
+    //....数据操作
+    if(!$m->save($save)) throw new \Exception("保存失败！");
+    if(!$m->commit()) throw new \Exception("提交失败！");    //提交事务
+}catch(\Exception $e){//捕获错误信息
+    $m->rollback();   //回滚
+    return $e->getMessage(); 
+}</code></pre></table>
+<h2>11. 行锁</h2>
+<p>find() 和 select() 操作支持锁定数据行；
+方法是 传入第二个参数为 true</p>
+<blockquote>
+<p><font color=red>该功能只能在事务处理中有效（也就是必须在 begin() 和 commit() 方法之间才会有效）
+<strong>!!!务必注意存储引擎是否支持事务处理!</strong></font></p>
+</blockquote>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$where['id'] = 1;
+try{
+    $m->begin();
+    $user = $m->where($where)->find(null,true); //锁定该行直到操作结束
+    if(!$user) throw new \Exception("用户数据不存在");
+    $result = $m->where($where)->setField('level',1);
+    if(!$result) throw new \Exception("设置用户等级失败");
+    if(!$m->commit()) throw new \Exception("提交失败！");
+}catch(\Exception $e){
+    $m->rollback();
+    return $e->getMessage();
+}</code></pre></table>
+<blockquote>
+<p><font color=red><strong>查询条件比较复杂的情况</strong>
+field(), where(), order(), group(), having() 方法当中都可以直接写相应的SQL
+如果这还满足不了你的需求，那就直接写原生SQL语句查询吧</font></p>
+</blockquote>
+<table width='100%' class='codestyle'><pre><code>$m->field('
+    `id`,
+    `userid`,
+    `username`,
+    FROM_UNIXTIME(`regtime`,'%Y-%m-%d') AS `regtime`,
+    SUM(`number`) AS `number`
+')
+->where('`groupid` = 1')
+->group('`userid`')
+->having('SUM(`money`)' > 100)
+->order('`regtime` DESC')
+->select();</code></pre></table></div><h2>13.6、where条件</h2><div style="margin-left:0px;"><blockquote>
+<p><font color=red>where 条件设计稍微有点复杂，所以单独拿出来
+多数情况下使用数组参数即可满足要求
+在实现复杂的where条件时，如果数组参数满足不了要求，可以使用字符串参数
+字符串参数 框架将不做解析，直接交给PDO处理
+在书写字符串参数时应尽量遵循SQL的书写规范</font></p>
+</blockquote>
+<h2>基本操作</h2>
+<table width='100%' class='codestyle'><pre><code>$where['id'] = 10;          // where `id`=10;   等于
+$where['id >'] = 10;        // where `id`>10;   大于
+$where['id <'] = 10;        //where `id`<10;    小于
+$where['id >='] = 10;       //where `id`>=10;   大于等于
+$where['id <='] = 10;       //where `id`<=10;   小于等于
+$where['id <>'] = 10;       //where `id`<>10;   不等于</code></pre></table>
+<p><strong>IN 和 NOT IN</strong></p>
+<table width='100%' class='codestyle'><pre><code>$where['id'] = [2,4,6,8];          //where `id` IN(2,4,6,8); 
+$where['id IN'] = [2,4,6,8];       //同上 指定操作符是'IN'
+$where['id NOT IN'] = [2,4,6,8];   //where `id` NOT IN(2,4,6,8)</code></pre></table>
+<p><strong>BETWEEN 和 NOT BETWEEN</strong></p>
+<table width='100%' class='codestyle'><pre><code>$where['id BETWEEN'] = [1,10]        //WHERE `id` BETWEEN 1 AND 10
+$where['id NOT BETWEEN'] = [1,10]    //WHERE `id`  NOT BETWEEN 1 AND 10</code></pre></table>
+<p><strong>LIKE</strong></p>
+<table width='100%' class='codestyle'><pre><code>$where['name LIKE'] = '%tom%'         //WHERE `name` LIKE %tom%
+$where['name'] = '%tom%'              //WHERE `name` LIKE %tom%</code></pre></table>
+<p><strong>多个字段对应同一个值的情况：</strong></p>
+<table width='100%' class='codestyle'><pre><code>$where['id|uid'] = 10;          //where `id`=10 OR `uid`=10</code></pre></table>
+<h2>连接多个条件</h2>
+<p><strong>默认使用 AND 连接多个条件</strong></p>
+<table width='100%' class='codestyle'><pre><code>$where['id >'] = 10;
+$where['pot >'] = 100;
+//...更多
+where `id`>10 AND `pot`>100 AND ...更多     //合并后的条件</code></pre></table>
+<p><strong>OR</strong></p>
+<table width='100%' class='codestyle'><pre><code>$where['id >'] = 10;
+$where['pid <'] = ['OR',20];
+WHERE `id`>10 OR `pid`<20       //合并后的语句
+
+也可以这么写：
+$where['OR pid <'] = 20;
+
+也可以写在一个数组里面
+$where = ['id >'=>10,'OR pid <'=>20];</code></pre></table>
+<blockquote>
+<p><font color=red>where条件可以多次调用以应对稍微复杂一点的条件</font></p>
+</blockquote>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$where1 = ['id >'=>10,'OR pot >'=>100];
+$where2 = ['OR pid <'=> 20];
+$user = $m->where($where1)->where($where2)->select();
+//两次调用where()函数合并之后的 where 条件：
+WHERE (`id `>10 OR `pot `>100) OR (`pid`<20)</code></pre></table>
+<h2>使用字符串参数</h2>
+<p><strong>框架不做解析，也不绑定参数，需注意语句安全</strong></p>
+<table width='100%' class='codestyle'><pre><code>$where = "`id`>10 AND `pot`>100";</code></pre></table>
+<p><strong>绑定参数的方式：</strong></p>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$where = "`id`>:id AND `pot`>:pot";          //将参数绑定到 :id 和 :pot 上
+$arr = [':id'=>10,':pot'=>100];              //给绑定参数赋值
+$user = $m->where($where,$arr)->select();    //$arr作为第二个参数传入where函数</code></pre></table></div><h2>13.7、自动验证</h2><div style="margin-left:0px;"><h2>自动验证 依赖核心扩展类 verify.class.php</h2>
+<p>需要建立用户自定义模型文件
+例如： home/model/ 目录下建立 user.class.php
+继承 verify 类,所有规则都写在 $roles 数组中
+$roles 数组的键名（username email age）是要验证的字段名，键值数组是验证规则
+规则当中最后一个参数 'add' 和 'both' 是验证时机
+<strong>使用 getError()方法获取错误信息</strong></p>
+<table width='100%' class='codestyle'><pre><code><?php
+    namespace m;
+    use \ext\verify;
+    class user extends verify{
+        protected $returnMod = 2;    //设置返回时机
+        protected $roles = [
+            'username'=>[         //验证 username 字段
+                   'unique'=>['该用户已被注册！','add'],      //验证 unique 规则
+                   'length'=>[3,18,'用户名长度必须在3-18之间','both'],    //验证 length 规则
+                   'notnull'=>['username必填！'],        //验证 notnull 规则
+                   'must'=>true,     //不论提交的数据是否存在该字段都进行验证
+             ],
+            'email'=>[           //验证 email 字段
+                 'email'=>['电子邮件格式不正确！','both'],      //验证email规则      
+             ],
+             'age'=>[        //验证 age 字段
+                   'myfun'=>['checkage','年龄不符合要求'],   //使用自定义函数 checkage()进行验证
+              ],
+              //...更多字段的验证规则
+        ];
+
+        protected function checkage($value,$key){     //自定义的验证函数
+            if($value < 1 || $value > 100) return false;
+            else return true;
+        }
+
+        /*以下根据需求写自定义操作*/
+
+        public function addUser(){       //自定义的 addUser 操作
+            $result = $this->add($_POST);
+            if($result){
+                return 0; //操作成功
+            }else{
+                $err = $this->getError(); //获取错误信息
+                return $err;
+            }
+        }
+        //... 其它自定义操作
+    }</code></pre></table>
+<h2>规则说明</h2>
+<table width='100%' class='codestyle'><pre><code>非空：  'notnull' => ['提示信息','验证时机'],
+唯一：  'unique'  => ['提示信息','验证时机'],
+邮箱：  'email'   => ['提示信息','验证时机'],
+数字：  'number'  => ['提示信息','验证时机'],
+长度：  'length'  => [1,10,'提示信息','验证时机'],  //长度范围是一个参数时验证长度相等,
+区间：  'between' => [1,10,'提示信息','验证时机'], //包含边界值1和10
+相等：  'eq'      => ['要比较的另一字段','提示信息','验证时机'],
+正则：  'preg'    => ['正则表达式','提示信息','验证时机'],
+必须：  'must'    => true/false    //为真时则不管数据是否有此字段都要验证，默认false（有此字段时才验证）</code></pre></table>
+<h2>验证时机</h2>
+<p><strong>默认为 'both'</strong></p>
+<table width='100%' class='codestyle'><pre><code>'add'          //添加数据时验证
+'update'       //更新数据时验证
+'both'         //添加和更新时都验证</code></pre></table>
+<h2>返回时机</h2>
+<p><strong>默认为 某个字段验证失败就返回</strong></p>
+<table width='100%' class='codestyle'><pre><code>模型中定义成员变量：protected $returnMod = 1;
+$returnMod = 0    //全部验证完毕之后返回
+$returnMod = 1    //某个字段验证失败返回（默认）
+$returnMod = 2    //某一条规则验证失败返回</code></pre></table>
+<blockquote>
+<p><font color=red>注意，要实现自动验证只有下面几种方法</font></p>
+</blockquote>
+<table width='100%' class='codestyle'><pre><code>$m = M('user');
+$m->add($add);        //添加数据  add()方法
+$m->save($save);      //更新数据  save()方法
+$m->create($_POST);   //主动验证，参数为空时默认是$_POST
+$m->create($_POST,$type,$roles);   //主动验证,指定规则：$roles，指定验证时机：$type</code></pre></table></div><h2>13.8、数据分页</h2><div style="margin-left:0px;"><h2>1. page($num,$roll,$page)</h2>
+<p><strong>参数：</strong></p>
+<table width='100%' class='codestyle'><pre><code>$num：     分页后每一页的数据量
+$roll：    最多返回的分页数量（默认10页）
+$page：    当前的页码（默认：$_GET['p']）</code></pre></table>
+<h3>例如</h3>
+<table width='100%' class='codestyle'><pre><code>$user = D('user');
+$list = $user->page(20)->select();                        //按每页20条数据分页
+$page = $user->getPage();                                 //获取分页数据</code></pre></table>
+<p><strong>返回参数说明：</strong></p>
+<table width='100%' class='codestyle'><pre><code>$page['total']            //总数据量
+$page['pages_num']        //总分页数
+$page['nowpage']          //当前页码
+$page['prev']             //上一页
+$page['next']             //下一页
+$page['start']            //第一页
+$page['end']             //最后一页
+$page['li']              //分页数据（'页码'=>'链接'）</code></pre></table>
+<h2>2. jsPage($num=10,$total=0,$page=0,$max=0)</h2>
+<p><strong>该方法用于前端采用js分页的方式</strong>
+<strong>参数：</strong></p>
+<table width='100%' class='codestyle'><pre><code>$num：     分页后每一页的数据量
+$total：   是否返回总数据量
+$page：    当前的页码（默认：$_GET['p']）
+$max：     限制最大总分页数</code></pre></table>
+<h3>例如</h3>
+<table width='100%' class='codestyle'><pre><code>$user = D('user');
+$list = $user->jsPage(20,true)->select();    //按每页20条数据分页，并且获取总数据量
+$page = $user->getPage();                    //获取分页数据
+$total = $page['total'];                     //总数据量</code></pre></table></div><h2>13.9、子查询</h2><div style="margin-left:0px;"><h2>subQuery($field)</h2>
+<h4>使用subQuery()获取子查询语句</h4>
+<h4>后续使用子查询语句的where条件必须使用字符串参数（3.1版本不需要）</h4>
+<h3>示例</h3>
+<table width='100%' class='codestyle'><pre><code>$m = D('user');
+$where = ['groupid'=>1];
+$sub = $m->where($where)->subQuery('userid');     //获取子查询的SQL语句
+
+$where = 'userid IN('.$sub.')';
+$result = $m->table('bill')->where($where)->select();</code></pre></table></div><h2>13.10、原生SQL语句的使用</h2><div style="margin-left:0px;"><h2>使用封装的PDO类</h2>
+<table width='100%' class='codestyle'><pre><code>$config = [
+    'DB_HOST' => ['127.0.0.1','127.0.0.1'],
+    'DB_NAME' => 'db1',
+    'DB_USER' => 'root',
+    'DB_PASS' => 'root',
+    'DB_PORT' => '3306',
+    'DB_PREFIX' => 'zphp_', //表名前缀
+    'DB_CHARSET' => 'utf8', //字符集
+    'DB_CACHEMOD' => 0 //缓存方式
+];
+
+$db = new \z\pdo($config); // 可以传入连接参数
+$fix = $db->getPrefix(); // 获取表前缀
+$sql = "SELECT `username` FROM `{$fix}user` WHERE `userid` > :userid";
+$bind = [':userid'=>10]; //绑定参数
+$result = $db->queryAll($sql,$bind); //查询多条记录
+$result = $db->queryOne($sql,$bind); //查询单条记录
+$result = $db->queryFields($sql,$bind); //查询某字段的多条记录
+$result = $db->queryField($sql,$bind); //查询某字段的单条记录
+$result = $db->cache(10)->queryField($sql,$bind); //缓存查询
+$result = $db->submit($sql,$bind); //增删改的提交方式
+$result = $db->begin(); //开始事务
+$result = $db->commit(); //提交事务
+$result = $db->rollback(); //回滚事务</code></pre></table>
+<h2>直接使用PDO</h2>
+<table width='100%' class='codestyle'><pre><code>$pdo = PDO($config) // 支持传入连接参数
+$sql = 'SELECT * FROM `zphp_user`';
+$sth = $pdo->query($sql);
+$list = $sth->fetchAll();</code></pre></table></div><h2>13.11、数据缓存</h2><div style="margin-left:0px;"><h2>缓存方式</h2>
+<p>配置文件里面配置缓存方式：</p>
+<table width='100%' class='codestyle'><pre><code>'DB_CACHEMOD' => 0 //连接配置里面的缓存方式</code></pre></table>
+<h2>查询缓存</h2>
+<p>也可以在查询时指定缓存方式</p>
+<table width='100%' class='codestyle'><pre><code>$result = $m->where($where)->cache(10,$mod)->select();
+// cache() 方法第一个参数是缓存时间，单位是秒。第二参数  $mod 是缓存方式（0：文件方式，1：redis，2：memcached）
+// cache() 必须在语句最后的select()、find()、queryAll ... 等之前调用
+// $mod 为空时 使用配置参数，无配置参数时 采用文件方式缓存</code></pre></table></div><h2>13.12、连接Sqlite</h2><div style="margin-left:0px;"><h2>连接Sqlite</h2>
+<table width='100%' class='codestyle'><pre><code>$file = 'xxx.db';         //文件路径
+$dsn = "sqlite:{$file}";
+$db = D('user', ['dsn'=>$dsn]);</code></pre></table>
+<h2>使用PDO</h2>
+<table width='100%' class='codestyle'><pre><code>$file = 'xxx.db';         //文件路径
+$dsn = "sqlite:{$file}";
+$pdo = PDO(['dsn'=>$dsn])</code></pre></table></div></div></body></html>
