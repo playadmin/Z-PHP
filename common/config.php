@@ -20,6 +20,10 @@ return [
     ],
     'VIEW' => [
         'php_tag' => 'php',
+        'custom_tags'=>[
+            // 标签名 => [类库路径(类命名空间+类名), 函数名, 接收数据的变量名]
+            'data-size' => ['app\common\tags', 'size', '$var'],
+        ],
         'import_tag' => 'import',
         'template_tag' => 'template',
         'ext' => '.html',

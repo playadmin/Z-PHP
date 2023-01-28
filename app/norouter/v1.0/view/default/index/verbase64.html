@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<head>
+  <import file="block/common.html" name="head"/>
+</head> 
+<body>
+  <import file="block/common.html" name="nav"/>
+  <div class="container">
+    <h1><{ $title }></h1>
+    <h2>生成的验证码是：<{ $code }></h2>
+    <img src="<{ $base64 }>">
+    <h2><a href="/demo.php/vercode" target="_blank">直接输出验证码图片</a></h2>
+  </div>
+  <import file="block/common.html" name="footer"/>
+</body>
+</html>

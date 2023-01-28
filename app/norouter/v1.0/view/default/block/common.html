@@ -1,0 +1,42 @@
+<!-- head -->
+<template name="head">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Z-PHP 框架</title>
+  <link rel="stylesheet" href="<{U_RES_VER}>/css/main.css">
+</template>
+
+<!-- 导航 -->
+<template name="nav">
+  <nav class="navbar">
+    <div class="navbar-left">
+      <php foreach="$navs as $k0=>$v0">
+        <?php $class = 'nav-li' ?>
+        <a class="<{ $class }>" href="<{ $v0 }>"><{ $k0 }></a>
+      </php>
+    </div>
+    <div class="navbar-right">
+      <php if="!true">
+        <div class="">
+          <a class="">注 册</a>
+          <a class="">登 录</a>
+        </div>
+      </php>
+      <php else>
+        <div class="">
+          <a class="" href="">用户中心</a>
+          <a class="" href="">退出登录</a>
+        </div>
+      </php>
+    </div>
+  </nav>
+</template>
+
+<!-- 页脚 -->
+<template name="footer">
+  <footer class="footer">
+    <p>
+      <strong>Z-PHP</strong> by <a href="">Z-PHP</a>. The source code is licensed
+      <a href="">Apache2</a>.
+    </p>
+  </footer>
+</template>

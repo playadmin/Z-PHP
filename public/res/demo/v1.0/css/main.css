@@ -1,0 +1,44 @@
+body{
+	padding: 0;
+	margin: 0;
+}
+p{
+	margin: 1rem;
+	word-break: break-word;
+}
+a{
+	text-decoration: none;
+}
+h1,h2,h3{
+	text-align: center;
+}
+.navbar,.container{
+	padding: 1rem;
+}
+.navbar{
+	font-size: 2rem;
+	overflow: hidden;
+}
+.navbar-left{
+	float: left;
+}
+.navbar-right{
+	float: right;
+}
+.navbar a {
+	display: inline-block;
+	padding: 5px 10px;
+	background: #eee;
+	border-radius: 10px;
+}
+.container{
+	width: 1024px;
+	margin:2rem auto;
+	font-size: 1rem;
+	text-align: center;
+}
+.footer{
+	text-align: center;
+	padding: 3rem 0;
+	background: #eee;
+}

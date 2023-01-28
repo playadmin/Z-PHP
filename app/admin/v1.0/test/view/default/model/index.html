@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<head>
+  <import file="block/common.html" name="head"/>
+</head> 
+<body>
+  <import file="block/common.html" name="nav"/>
+  <h1><{ $title }></h1>
+  <div class="container">
+    <php foreach="$act as $key=>$value">
+      <h3><a href="<{ $value }>"><{ $key }></a></h3>
+    </php>
+  </div>
+  <import file="block/common.html" name="footer"/>
+</body>
+</html>
