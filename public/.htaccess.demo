@@ -1,0 +1,8 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+	RewriteBase /
+    RewriteCond %{REQUEST_FILENAME} -f
+	RewriteRule ^.+$ - [L]
+    RewriteRule ^(admin|demo)(.*)$ $1.php [L,E=PATH_INFO:$2]
+    RewriteRule ^(.*)$ index.php [L,E=PATH_INFO:$1]
+</IfModule>
