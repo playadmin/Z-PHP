@@ -135,7 +135,7 @@ abstract class db
         return $this->PDO->Writer()->inTransaction();
     }
     public function GetSql (): string {
-        return $this->GetSql();
+        return $this->PDO->GetSql();
     }
     public function Begin(): bool
     {
