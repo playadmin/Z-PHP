@@ -20,7 +20,6 @@ class view
     public static function setup(): void {
         \z::Hook(\z::BEFORE_START, __CLASS__, function () {
             define('THEME', $GLOBALS['ZPHP_CONFIG']['VIEW']['theme'] ?? 'default');
-            define('TPL_EXT', $GLOBALS['ZPHP_CONFIG']['VIEW']['ext'] ?? '.html');
             define('P_VIEW', empty(ROUTE['module']) ? P_APP . 'view/' : P_APP . ROUTE['module'] . '/view/');
             define('P_THEME', P_VIEW . THEME . '/');
             define('P_HTML', P_TMP . 'html/');
