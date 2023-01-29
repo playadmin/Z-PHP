@@ -8,7 +8,6 @@ use Exception;
 abstract class db
 {
     use \lib\z\dbc\cache;
-    const CACHE_DIR = P_CACHE . 'db/';
     const WRAP_L = '', WRAP_R = '';
     protected static array $DB_INSTANCE = [];
     protected array $DB_CONFIG = [],
@@ -104,17 +103,15 @@ abstract class db
         $table = strstr($this->DB_TABLE, ' ', true) ?: $this->DB_TABLE;
         return [$table, sha1($key)];
     }
-    public function CacheDir (): string
-    {
-        return self::CACHE_DIR;
-    }
     /**
      * 缓存数据
      * $mod 缓存方式 [file, redis, memcached]
      */
-    public function Cache(int $expire = 0, string $mod = 'file'): static
+    public function Cache(int $expire = 0, ?string $mod = null): static
     {
-        $this->Z_CACHE = [$expire, $mod];
+        $mod || $mod = empty($this->DB_CONFIG['cache_mod']) ? 'file' : $this->DB_CONFIG['cache_mod'];
+        empty($this->DB_CONFIG['dbname']) && $this->DB_CONFIG['dbname'] = 'mydb';
+        $this->Z_CACHE = [$expire ?: 0, $mod];
         return $this;
     }
     public function Add(array $data, bool $ignore = false)
@@ -422,13 +419,12 @@ abstract class db
     }
     public function CacheFind(int $fetch, string $sql): array
     {
-        $mode = $this->Z_CACHE[1] ?: 'file';
-        $expire = $this->Z_CACHE[0] ?: 0;
-        $this->Z_CACHE = [];
+        list($mod, $expire) = $this->Z_CACHE;
         list($table, $key) = $this->CacheKey('1', $fetch, $sql);
-        $result = $this->GetCache($mode, $table, $key);
+        $this->Z_CACHE = [];
+        $result = $this->GetCache($mod, $this->DB_CONFIG['dbname'], $table, $key);
         if (null === $result) {
-            $res = $this->SetCache($mode, $table, $key, function () use ($sql, $fetch) {
+            $res = $this->SetCache($mod, $this->DB_CONFIG['dbname'], $table, $key, function () use ($sql, $fetch) {
                 $stmt = $this->PDO->Stmt($sql, $this->DB_BIND);
                 return $stmt->Row($fetch);
             }, $expire);
@@ -439,8 +435,7 @@ abstract class db
     public function CacheSelect(int $fetch): array
     {
         $field = $this->DB_field();
-        $mode = $this->Z_CACHE[1] ?: 'file';
-        $expire = $this->Z_CACHE[0] ?: 0;
+        list($mod, $expire) = $this->Z_CACHE;
         $this->Z_CACHE = [];
         $sql = "SELECT {$field} FROM ";
         if ($this->DB_PAGE) {
@@ -449,14 +444,14 @@ abstract class db
             $sqlc = $sql . $this->DB_sql();
             list($table, $key) = $this->CacheKey('2', $fetch, $sqlc);
             $pkey = "{$key}-p{$page['num']}";
-            $result = $this->GetCache($mode, $table, $key);
-            $paged = $this->GetCache($mode, $table, $pkey);
+            $result = $this->GetCache($mod, $this->DB_CONFIG['dbname'], $table, $key);
+            $paged = $this->GetCache($mod, $this->DB_CONFIG['dbname'], $table, $pkey);
             if (null === $result || !$paged) {
-                $res = $this->SetCache($mode, $table, $key, function () use ($sql, $fetch, $mode, $table, $pkey, $expire) {
+                $res = $this->SetCache($mod, $this->DB_CONFIG['dbname'], $table, $key, function () use ($sql, $fetch, $mod, $table, $pkey, $expire) {
                     $this->DB_page();
                     $sql .= $this->DB_sql(true);
                     $rows = $this->PDO->Stmt($sql, $this->DB_BIND)->Rows($fetch);
-                    $this->SetCache($mode, $table, $pkey, $this->DB_PAGED, $expire);
+                    $this->SetCache($mod, $this->DB_CONFIG['dbname'], $table, $pkey, $this->DB_PAGED, $expire);
                     $rows && $this->DB_CHAIN && $this->QueryChain($rows, $this->DB_CHAIN);
                     $this->DB_done();
                     return $rows;
@@ -468,9 +463,9 @@ abstract class db
         } else {
             $sql .= $this->DB_sql(true);
             list($table, $key) = $this->CacheKey('2', $fetch, $sql);
-            $result = $this->GetCache($mode, $table, $key);
+            $result = $this->GetCache($mod, $this->DB_CONFIG['dbname'], $table, $key);
             if (null === $result) {
-                $res = $this->SetCache($mode, $table, $key, function () use ($sql, $fetch) {
+                $res = $this->SetCache($mod, $this->DB_CONFIG['dbname'], $table, $key, function () use ($sql, $fetch) {
                     $stmt = $this->PDO->Stmt($sql, $this->DB_BIND);
                     return $stmt->Rows($fetch);
                 }, $expire);

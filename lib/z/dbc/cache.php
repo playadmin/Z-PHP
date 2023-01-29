@@ -6,37 +6,93 @@ use lib\z\cache as c;
 
 trait cache
 {
-    function GetCache (string $mode, string $table, string $key)
+    function GetCache (string $mod, string $dbname, string $table, string $key)
     {
-        return match ($mode) {
-            'file'=>$this->getFileCache($table, $key),
-            'redis'=>c::R("{$table}.{$key}"),
-            'memcached'=>c::M("{$table}.{$key}"),
+        return match ($mod) {
+            'file'=>$this->getFileCache($this->cacheDir($dbname, $table), $key),
+            'redis'=>c::R("DB:{$dbname}:{$table}:{$key}"),
+            'memcached'=>c::M("DB:{$dbname}:{$table}:{$key}"),
         };
     }
 
-    function SetCache (string $mode, string $table, string $key, $data, int $expire = 0)
-    {   return match ($mode) {
-            'file'=>$this->setFileCache($table, $key, $data, $expire),
-            'redis'=>c::R("{$table}.{$key}", $data, $expire),
-            'memcached'=>c::M("{$table}.{$key}", $data, $expire),
+    function SetCache (string $mod, string $dbname, string $table, string $key, $data, int $expire = 0)
+    {   return match ($mod) {
+            'file'=>$this->setFileCache($this->cacheDir($dbname, $table), $key, $data, $expire),
+            'redis'=>c::R("DB:{$dbname}:{$table}:{$key}", $data, $expire),
+            'memcached'=>c::M("DB:{$dbname}:{$table}:{$key}", $data, $expire),
         };
     }
 
-    protected function getFileCache (string $table, string $key)
+    protected function cacheDir (string $dbname, string $table = '')
     {
-        $file = $this->CacheDir() . "{$table}/{$key}.php";
-        list($data, $expire) = c::GetFileCacheHasPrefix($file, c::CODE_PHP_ARR, true);
+        return P_CACHE . "db/{$dbname}/{$table}";
+    }
+    function CleanCache (string $mod, string $dbname, string $table = '')
+    {
+        switch ($mod) {
+            case 'redis':
+                return $this->delRedis($dbname, $table);
+                break;
+            case 'memcached':
+                return $this->delMemcached($dbname, $table);
+                break;
+            default:
+                return $this->delFile($dbname, $table);
+                break;
+        }
+    }
+    private function delFile(string $dbname, string $table = '')
+    {
+        $dir = $this->cacheDir($dbname, $table);
+        return DelDir($dir, true);
+    }
+    protected function delRedis (string $dbname, string $table = ''): int
+    {
+        $path = "DB:{$dbname}:";
+        $table && $path .= "{$table}:";
+        $redis = cache::Redis();
+        if ($keys = $redis->keys("{$path}*")) {
+            $redis->pipeline();
+            foreach ($keys as $key) {
+                $redis->del($key);
+            }
+            $result = $redis->exec();
+            $result && $result = (int)array_sum($result);
+        } else {
+            $result = 0;
+        }
+        return $result;
+    }
+    protected function delMemcached($dbname, $table)
+    {
+        $path = "DB:{$dbname}:";
+        $table && $path .= "{$table}:";
+        $preg = "/^{$path}.+$/i";
+        $mem = cache::Memcached();
+        $n = 0;
+        if ($keys = $mem->getAllKeys()) {
+            foreach ($keys as $key) {
+                if (preg_match($preg, $key)) {
+                    $n += $mem->delete($key);
+                }
+            }
+        }
+        return $n;
+    }
+
+    protected function getFileCache (string $dir, $key)
+    {
+        $file = "{$dir}/{$key}.php";
+        list($data, $expire) = c::GetExpireFileCache($file, c::CODE_PHP_ARR, true);
         if ($expire && $expire < TIME) {
             return null;
         }
         return $data;
     }
-    protected function setFileCache (string $table, string $key, callable|array $data, int $expire = 0)
+    protected function setFileCache (string $dir, string $key, callable|array $data, int $expire = 0)
     {
-        $expire && $expire < TIME && $expire += TIME;
-        $file = $this->CacheDir() . "{$table}/{$key}.php";
-        $ret = c::SetFileCache($file, $data, c::CODE_PHP_ARR, $expire);
-        return $ret;
+        $file = "{$dir}/{$key}.php";
+        $expire || $expire = 60;
+        return c::SetFileCache($file, $data, c::CODE_PHP_ARR, $expire + TIME);
     }
 }

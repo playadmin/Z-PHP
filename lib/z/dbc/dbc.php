@@ -76,7 +76,7 @@ class pdo {
         };
     }
 
-    public function Read (bool $reConnect = false): \PDO
+    public function Reader (bool $reConnect = false): \PDO
     {
         if ($this->pdoIndex < 0) {
             $this->pdoIndex = $this->readerIndexs > 1 ? rand(1, $this->readerIndexs) : $this->readerIndexs;
@@ -190,12 +190,12 @@ class pdo {
         $mtime = microtime(true);
         $this->SQL = $sql;
         $this->pdoParams = [];
-        $conn = $this->Read();
+        $conn = $this->Reader();
         try {
             $res = $conn->query($sql, $mode);
             $this->sumTime($mtime);
         } catch (\PDOException $e) {
-            $this->Retry($e) && $conn = $this->Read(true);
+            $this->Retry($e) && $conn = $this->Reader(true);
             $mtime = microtime(true);
             $res = $conn->query($sql, $mode);
             $this->sumTime($mtime, '[retry]');
@@ -280,7 +280,7 @@ class stmt {
     ){
         $this->sql = trim($sql);
         $this->isRead = 0 === stripos($this->sql, 'SELECT');
-        $this->conn = $this->isRead ? $pdo->Read() : $pdo->Writer();
+        $this->conn = $this->isRead ? $pdo->Reader() : $pdo->Writer();
         $this->stmt = $this->conn->prepare($this->sql);
         $pdo->SetSql($this->sql);
         $pdo->SetParams($this->bind ?? []);
@@ -347,7 +347,7 @@ class stmt {
             $this->pdo->sumTime($mtime);
         } catch (\PDOException $e) {
             if ($this->pdo->Retry($e, $this->bind)) {
-                $this->conn = $this->isRead ? $this->pdo->Read(true) : $this->pdo->Writer(true);
+                $this->conn = $this->isRead ? $this->pdo->Reader(true) : $this->pdo->Writer(true);
             }
             $this->stmt = $this->conn->prepare($this->sql);
             $mtime = microtime(true);
@@ -385,7 +385,7 @@ class stmt {
             }
             $this->pdo->sumTime($mtime);
         } catch (\PDOException $e) {            
-            $this->pdo->Retry($e, $this->bind) && $this->conn = $this->pdo->Read(true);
+            $this->pdo->Retry($e, $this->bind) && $this->conn = $this->pdo->Reader(true);
             $this->stmt = $this->conn->prepare($this->sql);
             $mtime = microtime(true);
             if (!$this->stmt->execute($this->bind)) {
@@ -408,7 +408,7 @@ class stmt {
             }
             $this->pdo->sumTime($mtime);
         } catch (\PDOException $e) {
-            $this->pdo->Retry($e, $this->bind) && $this->conn = $this->pdo->Read(true);
+            $this->pdo->Retry($e, $this->bind) && $this->conn = $this->pdo->Reader(true);
             $this->stmt = $this->conn->prepare($this->sql);
             $mtime = microtime(true);
             if (!$this->stmt->execute($this->bind)) {

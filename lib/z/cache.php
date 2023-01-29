@@ -188,7 +188,7 @@ class cache
      * 写入文件缓存
      * @param file 文件路径
      * @param data 待写入的数据：可以是一个回调函数，只在需要写入时调用
-     * @param flag [0: 直接写入, 1: json_encode 编码后写入, 2: serialize 编码后写入, 3: 作为php代码写入]
+     * @param flag [0: 直接写入, 1: json_encode 编码后写入, 2: serialize 编码后写入, 3: 作为php代码写入 4: 作为php数组写入]
      * @param timeStamp 缓存数据的前缀(时间戳 <=0 表示没有过期时间)
      * @return array [写入字节数或false, 写入的数据]
      * 高并发时只有单个进程可以获取到锁，并写入文件；其它进程将等待写入完成后读取该文件数据并返回
@@ -204,7 +204,7 @@ class cache
      * 写入文件缓存
      * @param file 文件路径
      * @param data 待写入的数据：可以是一个回调函数，只在需要写入时调用
-     * @param flag [0: 直接写入, 1: json_encode 编码后写入, 2: serialize 编码后写入, 3: 作为php代码写入]
+     * @param flag [0: 直接写入, 1: json_encode 编码后写入, 2: serialize 编码后写入, 3: 作为php代码写入, 4: 作为php数组写入]
      * @param time 缓存数据的前缀(时间戳 <=0 表示没有过期时间)
      * @return array [写入字节数或false, 写入的数据]
      * 不同于 SetFileCache(), 此方法一定会写入, 并发时会依次写入
@@ -223,6 +223,11 @@ class cache
         return file_put_contents($file, $str, LOCK_EX);
     }
 
+    /**
+     * 获取无过期时间的缓存数据
+     * @param file 文件路径
+     * @param flag [0: 获取字符串, 1: json_decode 解码, 2: serialize 解码, 3: php代码, 4: php数组]
+     */
     public static function GetFileCache(string $file, int $flag = 2)
     {
         if (!is_file($file)) {
@@ -249,7 +254,12 @@ class cache
         return $data;
     }
 
-    public static function GetFileCacheHasPrefix(string $file, int $flag = 2)
+    /**
+     * 获取有过期时间的缓存数据
+     * @param file 文件路径
+     * @param flag [0: 获取字符串, 1: json_decode 解码, 2: serialize 解码, 3: php代码, 4: php数组]
+     */
+    public static function GetExpireFileCache(string $file, int $flag = 2)
     {
         if (!is_file($file)) {
             return null;
@@ -282,12 +292,12 @@ class cache
     }
 
     /**
-     * 更新缓存的部分字段
+     * 更新有过期时间缓存的部分字段
      * $patch 要更新的数据
      * $nx 缓存不存在时是否写入
      * $timeStamp 缓存的过期时间 (=0 表示没有过期时间, <0 表示不更新过期时间, >0 表示更新过期时间)
      */
-    static function PatchFileCacheHasPrefix(string $file, array|callable $patch, int $flag = 0, bool $nx = false, int $timeStamp = -1): array|bool|null
+    static function PatchExpireFileCache(string $file, array|callable $patch, int $flag = 0, bool $nx = false, int $timeStamp = -1): array|bool|null
     {
         if (!is_file($file)) {
             file_exists($dir = dirname($file)) || MakeDir($dir, 0755, true);
@@ -366,7 +376,7 @@ class cache
     }
 
     /**
-     * 更新缓存的部分字段
+     * 更新无过期时间缓存的部分字段
      * $patch 要更新的数据
      * $nx 缓存不存在时是否写入
      */
