@@ -224,16 +224,16 @@ abstract class db
     }
     public function Chain(array $chain = null): static
     {
-        /**
-         * $chain: [table=>[prikey, [raw_field=>[...chain_field]]]]
-         * $sourceMap: [raw_field=>[new_field, map]]
-         */
         $this->DB_CHAIN = $chain ?: [];
         return $this;
     }
 
     /**
      * 合并关联查询
+     * table: 要合并的表名，prikey：要合并的表主键名，raw_field：外键名，chain_field：要合并的表字段
+     * $chain: [table=>[prikey, [raw_field=>[...chain_field]]]]
+     * $chain: [目标表名=>[目标表主键名, [数据源(主表)外键名或主键名=>[目标表的字段]]]]
+     * $sourceMap: [raw_field=>[new_field, map]]
      */
     public function QueryChain(&$data, array $chain)
     {
@@ -782,7 +782,6 @@ abstract class db
             $keys[] = $_key;
             if ($isSqlValue) {
                 $sets[] = "{$_key} = " . $this->DB_wrapFileds($v);
-                $values[] = $v;
             } else {
                 $bind[] = $v;
                 $sets[] = "{$_key}=?";
@@ -1002,17 +1001,13 @@ abstract class db
         $isSqlValue = false;
         $operator = '';
         $logic = '';
-        $preg = '/^(OR\s+|AND\s+)?((\:?\w+)\s*([\<\>\=\!]{0,2})|.+)$/i';
+        // $preg = '/^(OR\s+|AND\s+)?((\:?\w+)\s*([\<\>\=\!]{0,2})|.+)$/i';
+        $preg = '/^(OR\s+|AND\s+)?([\:\w]+)\s*([\<\>\=\!]{0,2}|(NOT\s+)?(IN|LIKE|BETWEEN))$/i';
         if (preg_match($preg, $key, $match)) {
             $logic = empty($match[1]) ? '' : $match[1];
-            if (!empty($match[3])) {
-                $keys = $match[3];
-                $operator = $match[4] ?? '=';
-            } else {
-                $keys = $match[2];
-            }
+            $keys = $match[2];
+            $operator = $match[3] ?? '=';
         } else {
-            $isSqlValue = false;
             $keys = $key;
         }
         
