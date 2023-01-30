@@ -37,7 +37,11 @@ class view
                 return self::ENCODE_PREFIX . $i . self::ENCODE_END_CHAR;
             }, $match[0]);
         }, $html);
-
+        $pregSymbol = '/(\s+[@#&]+\w+)\s*(?==\s*["\'])/';
+        $html = preg_replace_callback($pregSymbol, function (array $m) {
+            $i = array_push(self::$REPLACE, $m[1]) - 1;
+            return self::ENCODE_PREFIX . $i . self::ENCODE_END_CHAR;
+        }, $html);
         return preg_replace(self::$PREG_FIX, ['<?php echo ', ';?>'], $html);
     }
     private static function replaceDecode(string $html): string
