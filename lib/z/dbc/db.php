@@ -224,16 +224,16 @@ abstract class db
     }
     public function Chain(array $chain = null): static
     {
-        /**
-         * $chain: [table=>[prikey, [raw_field=>[...chain_field]]]]
-         * $sourceMap: [raw_field=>[new_field, map]]
-         */
         $this->DB_CHAIN = $chain ?: [];
         return $this;
     }
 
     /**
      * 合并关联查询
+     * table: 要合并的表名，prikey：要合并的表主键名，raw_field：外键名，chain_field：要合并的表字段
+     * $chain: [table=>[prikey, [raw_field=>[...chain_field]]]]
+     * $chain: [目标表名=>[目标表主键名, [数据源(主表)外键名或主键名=>[目标表的字段]]]]
+     * $sourceMap: [raw_field=>[new_field, map]]
      */
     public function QueryChain(&$data, array $chain)
     {
