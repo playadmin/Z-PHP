@@ -102,11 +102,13 @@ class view
         $time = filemtime($file);
         $time > self::$CHANGED && self::$CHANGED = $time;
         $html = self::replaceEncode(file_get_contents($file));
-        $html = '<?xml encoding="UTF-8">' . (str_contains($html, '<' . self::$TAG['template']) ? $html : '<' . self::$TAG['template'] . '>' . $html . '</' . self::$TAG['template'] . '>');
+        // $html = '<?xml encoding="UTF-8">' . (str_contains($html, '<' . self::$TAG['template']) ? $html : '<' . self::$TAG['template'] . '>' . $html . '</' . self::$TAG['template'] . '>');
         $dom = new \DOMDocument('1.0', 'UTF-8');
-        $dom->loadHTML($html, self::OPTIONS);
+        $dom->loadHTML('<?xml encoding="UTF-8">' . $html, self::OPTIONS);
         DEBUGER && 2 < $GLOBALS['ZPHP_CONFIG']['DEBUG']['level'] && (DEBUGER)::setMsg(1140, $file);
         $nodes = $dom->getElementsByTagName(self::$TAG['template']);
+        $dom->removeChild($dom->firstChild);
+        self::$TPLDOM[$file][''] = [$dom, null, $file, ''];
         foreach ($nodes as $v) {
             $name = $v->getAttribute('name');
             self::$TPLDOM[$file][$name][0] = $v;
