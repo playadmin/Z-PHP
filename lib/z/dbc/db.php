@@ -782,7 +782,6 @@ abstract class db
             $keys[] = $_key;
             if ($isSqlValue) {
                 $sets[] = "{$_key} = " . $this->DB_wrapFileds($v);
-                $values[] = $v;
             } else {
                 $bind[] = $v;
                 $sets[] = "{$_key}=?";
@@ -1002,17 +1001,13 @@ abstract class db
         $isSqlValue = false;
         $operator = '';
         $logic = '';
-        $preg = '/^(OR\s+|AND\s+)?((\:?\w+)\s*([\<\>\=\!]{0,2})|.+)$/i';
+        // $preg = '/^(OR\s+|AND\s+)?((\:?\w+)\s*([\<\>\=\!]{0,2})|.+)$/i';
+        $preg = '/^(OR\s+|AND\s+)?([\:\w]+)\s*([\<\>\=\!]{0,2}|(NOT\s+)?(IN|LIKE|BETWEEN))$/i';
         if (preg_match($preg, $key, $match)) {
             $logic = empty($match[1]) ? '' : $match[1];
-            if (!empty($match[3])) {
-                $keys = $match[3];
-                $operator = $match[4] ?? '=';
-            } else {
-                $keys = $match[2];
-            }
+            $keys = $match[2];
+            $operator = $match[3] ?? '=';
         } else {
-            $isSqlValue = false;
             $keys = $key;
         }
         
