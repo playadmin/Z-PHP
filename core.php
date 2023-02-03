@@ -145,11 +145,11 @@ function ArrayIsList (&$arr) {
     }
     return $isList;
 }
-function ExportArray (array|string|int|float|bool $arr) {
-    if (!is_array($arr)) {
+function ExportArray ($arr, $quoteValStr = true, $quoteKeyStr = true) {
+    if (!is_array($arr) && !is_object($arr)) {
         return var_export($arr, true);
     }
-    if (!$arr) {
+    if (!$arr || (!is_array($arr) && !$arr = (array)$arr)) {
         return '[]';
     }
 
@@ -160,20 +160,20 @@ function ExportArray (array|string|int|float|bool $arr) {
             } elseif (null === $v) {
                 $slice[] = 'null';
             } else {
-                is_string($v) && $v = "'" . str_replace(["'", '"'], ["\'", '\"'], $v) . "'";
+                $quoteValStr && is_string($v) && $v = "'" . str_replace("'", "\'", $v) . "'";
                 $slice[] = $v;
             }
         }
     } else {
         foreach($arr as $k=>$v) {
             is_string($k) &&  $k = str_replace(["'", '"'], ["\'", '\"'], $k);
-            $key = is_string($k) ? "'{$k}'=>" : "{$k}=>";
+            $key = $quoteKeyStr && is_string($k) ? "'{$k}'=>" : "{$k}=>";
             if (is_array($v)) {
                 $slice[] = $key . ExportArray($v);
             } elseif (null === $v) {
                 $slice[] = "{$key}null";
             } else {
-                is_string($v) && $v = "'" . str_replace(["'", '"'], ["\'", '\"'], $v) . "'";
+                $quoteValStr && is_string($v) && $v = "'" . str_replace("'", "\'", $v) . "'";
                 $slice[] = $key . $v;
             }
         }
