@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace nec\z;
 
+use Exception;
 use lib\z\cache;
 
 view::setup();
@@ -37,7 +38,7 @@ class view
                 return self::ENCODE_PREFIX . $i . self::ENCODE_END_CHAR;
             }, $match[0]);
         }, $html);
-        $pregSymbol = '/(\s+[@#&]+\w+)\s*(?==\s*["\'])/';
+        $pregSymbol = '/(\s+[@#&$]+\w+)\s*(?==\s*["\'])/';
         $html = preg_replace_callback($pregSymbol, function (array $m) {
             $i = array_push(self::$REPLACE, $m[1]) - 1;
             return self::ENCODE_PREFIX . $i . self::ENCODE_END_CHAR;
@@ -96,7 +97,7 @@ class view
             $file = isset($info['extension']) ? "{$dir}/{$info['basename']}" : "{$dir}/{$info['basename']}.html";
         }
         if (!is_file($file)) {
-            throw new \Exception("file not fond: {$file}");
+            throw new Exception("file not fond: {$file}");
         }
         return $file;
     }
@@ -176,7 +177,7 @@ class view
                 $v = $attr->value ?: $n;
                 $key = '$' . $n;
                 if (!isset($item[1][$key]) && !isset($item[1][$n])) {
-                    throw new \Exception("received param {$attr->name} was not specified: {$item[2]}[name={$item[3]}]; from {$file}");
+                    throw new Exception("received param {$attr->name} was not specified: {$item[2]}[name={$item[3]}]; from {$file}");
                 }
                 $sets[] = "{$key} = {$v} ?? null";
             }
@@ -196,7 +197,7 @@ class view
                 $tpl = $f ? self::GetTpl($f, $file) : $file;
                 $d = isset(self::$TPLDOM[$tpl]) ? $dom : self::getBlock($tpl);
                 if (!isset(self::$TPLDOM[$tpl][$name])) {
-                    throw new \Exception("template tagName '{$name}' not exits : {$tpl}");
+                    throw new Exception("template tagName '{$name}' not exits : {$tpl}");
                 }
                 $replace[] = [$d, $tpl];
                 $sets[] = [$name, $tpl, $v, $dom];
@@ -263,10 +264,10 @@ class view
                     self::compressCss($compress[1] ?? $compress);
                     self::compressJavaScript($compress[2] ?? $compress);
                 }
-                self::replacePHP();
+                self::replacePhpTags();
                 if (self::$TAG['custom']) {
                     foreach(self::$TAG['custom'] as $name=>$cfg) {
-                        self::replaceCustomTag($name, $cfg);
+                        self::replaceCustomTags($name, $cfg);
                     }
                 }
                 $html = self::$DOM->saveHTML();
@@ -286,7 +287,7 @@ class view
         $html_time = is_file($file) ? filemtime($file) : 0;
         if ($html_time && $html_time + $time >= TIME) {
             if ((!$h = fopen($file, 'r')) || !flock($h, LOCK_SH)) {
-                throw new \Exception('获取文件共享锁失败');
+                throw new Exception('File share lock failed ');
             }
             $cache = fread($h, filesize($file));
             flock($h, LOCK_UN);
@@ -341,7 +342,7 @@ class view
         }
     }
 
-    private static function replacePHP(): void
+    private static function replacePhpTags(): void
     {
         $tags = self::$DOM->getElementsByTagName(self::$TAG['php']);
         for ($i = $tags->length - 1; 0 <= $i; --$i) {
@@ -394,28 +395,49 @@ class view
         }
     }
 
-    private static function replaceCustomTag(string $name, array $cfg): void
+    private static function replaceCustomTags(string $name, array $cfg): void
     {
         $tags = self::$DOM->getElementsByTagName($name);
-        foreach($tags as $t) {
+        for ($i = $tags->length - 1; 0 <= $i; --$i) {
+            // if (!$act = $cfg[1] ?? null) {
+            //     throw new Exception("Custom tag required a method name on parameter 2");
+            // }
+            $act = $cfg[1] ?? 'fn';
+            if ($class = $cfg[0] ?? null) {
+                $call = "{$class}::{$act}";
+            } else {
+                $call = $act;
+            }
+            $t = $tags[$i];
+            $args = [];
             $attrs = [];
             if ($t->attributes->length) {
                 foreach($t->attributes as $k=>$v) {
-                    $attrs[$k] = $v->value;
+                    if ($k && ':' === $k[0]) {
+                        $args[substr($k, 1)] = $v->value;
+                    } else {
+                        $args[$k] = is_string($v->value) ? "'" . str_replace("'", "\'", $v->value) . "'" : $v->value;
+                        $attrs[$k] = $v->value;
+                    }
                 }
             }
-            $parent = $t->parentNode;
-            if (!is_callable($cfg[0])) {
-                throw new \Exception("自定义标签类或方法不存在: {$cfg[0]}");
-            }
-            if (empty($cfg[1])) {
-                list($pre, $dd) = call_user_func($cfg[0], $attrs);
-                $code = '$attrs=' . var_export($attrs, true) . ';' . $pre . '?';
-                $dd .= '?';
+
+            if (!empty($cfg[2])) {
+                if (isset($args['var'])) {
+                    $var = $args['var'] ?: '$var';
+                    unset($args['var']);
+                } else {
+                    $var = '$var';
+                }
+                $code = str_contains($var, ',') ? "list({$var})=" : "{$var}=";
+                $code .= $call . '(' . ExportArray($args, false) . ');?';
             } else {
-                $code = str_contains($cfg[1], ',') ? "list({$cfg[1]})=" : "{$cfg[1]}=";
-                $code .= "{$cfg[0]}({$attrs});?";
+                list($pre, $dd) = $call($attrs, $args);
+                $code = $pre . '?';
+                $dd .= '?';
             }
+
+            $parent = $t->parentNode;
             $new = self::$DOM->createProcessingInstruction('php', $code);
             $parent->insertBefore($new, $t);
             foreach ($t->childNodes as $c) {
