@@ -20,8 +20,8 @@ class index {
     static function index () {
         $title = '这是 demo应用 => index控制器 => index（）方法';
         $str = str_repeat('balabalabalabalabalabalabala', 10);
-        $var = 1234567;
-        view::assign('var', $var);
+        $VAR = 1234567;
+        view::assign('VAR', $VAR);
         view::assign('title', $title);
         view::assign('str', $str);
         view::Display();

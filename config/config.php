@@ -32,7 +32,9 @@ return [
         'prefix'=>'[#',
         'suffix'=>'#]',
         'custom_tags' => [
-            'loop' => ['Loop'],
+            'set'=>['model\testc', 'testb', '$var'], // [类, 方法(默认为fn), 接收变量名(无此参数将重写此标签(将返回值当作php代码写入模板)]
+            'loop'=>['model\viewTag', 'loop'],
+            'if' => ['model\viewTag', 'if'],
         ],
     ],
     'REDIS' => [

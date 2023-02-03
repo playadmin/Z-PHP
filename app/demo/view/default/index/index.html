@@ -4,15 +4,33 @@
 </head> 
 <body>
   <import file="../block/common.html" name="nav"/>
-  <div class="container">
+  <div class="container [# $title #]">
     <h1>[# $title #]</h1>
-    <h2>&lt;asdasd&gt;</h2>
+    <h2>&lt;asdasd&gt;</h2>   
+    <set :var="$asd" :num="5" />
+    <if :var="$asd">  
+      <h1>IF TAG IS TRUE</h1>
+    </if>     
+    <p></p>   
+    <if :var="$res0" c="testc" a="testa" :cat="1" type="news" :num="count($asd)">   
+      <if :var="$asd">  
+        <h1>IF TAG IS TRUE ##</h1>
+      </if> 
+      <div class="loop">
+        <loop :var="$res0" :key="$k" :val="$v">  
+          <if :var="$asd">  
+            <h1>@@##</h1>
+          </if> 
+          <p><span style="color: red;">[# $k #]</span> => <span style="color: green;">[# $v #]</span></p>
+        </loop>
+      </div> 
+    </if>  
+        
     <p style="color: green;">lang: &nbsp;[# Lang('ERR_404') #]</p>
     <p style="color: red;">lang: &nbsp;[# Lang('ERR_PARAMS', null, ['$a', '$b']) #]</p>
     <import file="./block/content.html" name="content"/>
-    <data-size args="12345678" />
-    <p style="color: red;">[# $var #]</p>
-    <?php P($var); ?>
+    <p style="color: red;">[# $VAR #]</p>
+    <?php P($VAR); ?>
   </div>
   <import file="../block/common.html" name="footer"/>      
 </body>
