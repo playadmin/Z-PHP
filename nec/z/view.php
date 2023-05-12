@@ -14,7 +14,7 @@ class view
     ENCODE_PREFIX = 'z-php-encode.', ENCODE_END_CHAR = '.',
     OPTIONS = LIBXML_NSCLEAN + LIBXML_PARSEHUGE + LIBXML_NOBLANKS + LIBXML_NOERROR + LIBXML_HTML_NODEFDTD + LIBXML_ERR_FATAL + LIBXML_COMPACT;
     private static \DOMDocument|null $DOM = null;
-    private static array $TAG = [], $TPLDOM = [], $PARAMS = [], $REPLACE = [], $PREG_FIX = [];
+    private static array $TAG = [], $TPLDOM = [], $PARAMS = [], $REPLACE = [], $PREG_FIX = [], $CACHE = [];
     private static string $PRE = '', $SUF = '', $PREG_CODE = '';
     private static int $CHANGED = 0;
 
@@ -279,24 +279,21 @@ class view
         self::$TPLDOM = [];
     }
 
-    public static function GetCache(string $name, int $time, int $flag = 0): string
+    public static function GetCache(int $time, string $name = '', int $flag = 0): string | false
     {
         $tpl = self::GetTpl($name);
-        $run = self::GetRun($tpl);
-        $file = self::getCacheFile($flag, $run);
+        $file = self::getCacheFile($flag, $tpl);
         $html_time = is_file($file) ? filemtime($file) : 0;
         if ($html_time && $html_time + $time >= TIME) {
             if ((!$h = fopen($file, 'r')) || !flock($h, LOCK_SH)) {
-                throw new Exception('File share lock failed ');
+                throw new \Exception('获取文件共享锁失败');
             }
             $cache = fread($h, filesize($file));
             flock($h, LOCK_UN);
             return $cache;
         }
-        return cache::SetFileCache($file, function () use($name): string {
-            ob_start() && require self::GetCompile($name);
-            return ob_get_clean();
-        })[1];
+        self::$CACHE = [$tpl, $file];
+        return false;
     }
 
     private static function compressJavaScript(int $compress): void
@@ -452,11 +449,16 @@ class view
         }
     }
 
-    private static function getCacheFile($flag, array $run): string
+    private static function getCacheFile($flag, string $tpl): string
     {
+        $arr = explode('/', $tpl);
+        $len = count($arr);
+        $name = $arr[$len - 1];
+        $html_path = P_HTML . APP_NAME . '/' . THEME . '/' . $arr[$len - 2] . '/';
+
         if (!$flag) {
-            $html_path = P_HTML . THEME . '/' . $run[0];
-            $html_file = "{$html_path}/{$run[1]}.html";
+            $file = explode('.', $name)[0] . '.html';
+            $html_file = $html_path . $file;
         } else {
             if (is_array($flag)) {
                 $i = 0;
@@ -470,18 +472,22 @@ class view
             } else {
                 $query = ROUTE['query'];
             }
-            $html_path = P_HTML . THEME . "/{$run[0]}/{$run[1]}";
-            $html_file = "{$html_path}/" . md5(serialize($query)) . '.html';
+            $html_file = "{$html_path}/" . md5($name . serialize($query)) . '.html';
         }
         return $html_file;
     }
-    public static function Display(string $name = '', int $time = 0, int $flag = 0): void
+    public static function Display(string $name = ''): void
     {
-        self::$PARAMS && extract(self::$PARAMS);
-        if (!$time) {
+        if (self::$CACHE) {
+            $ret = cache::SetFileCache(self::$CACHE[1], function (): string {
+                self::$PARAMS && extract(self::$PARAMS);
+                ob_start() && require self::GetCompile(self::$CACHE[0]);
+                return ob_get_clean();
+            });
+            echo $ret[1];
+        } else {
+            self::$PARAMS && extract(self::$PARAMS);
             require self::GetCompile($name);
-        } elseif ($cache = self::GetCache($name, $time, $flag)) {
-            echo $cache;
         }
     }
     public static function Assign(string $key, $val): void
