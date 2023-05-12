@@ -23,8 +23,8 @@ return [
     'DB' => [
         'dsn' => 'mysql:host=127.0.0.1;dbname=test;port=3306',
         'dbname' => 'test', // 如果设置了dsn，此处作为别名可以随便指定不同于dsn中的数据库名称
-        'user' => 'root',
-        'pass' => 'root',
+        'user' => 'test',
+        'pass' => '123456',
         'charset' => 'utf8mb4',
         'prefix' => 'z_',
     ],
