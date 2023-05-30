@@ -6,17 +6,18 @@ class out {
     const SUCCESS = 0,
     CODE = 'Ret',
     DATA = 'Data',
+    ERRDATA = 'ErrData',
     REDIRECT = 'Redirect',
     MSG = 'Msg',
     DEBUG = 'ZPHP_DEBUG',
     PAGES_LIST = 'Items',
     PAGES_PAGE = 'Page';
 
-    static function Error(int $ret, string $desc = '', array $d = [], $header = null)
+    static function Error(int $ret, string $desc = '', array $d = null, $header = null)
     {
         $data[static::CODE] = $ret;
         $data[static::MSG] = $desc;
-        $data[static::DATA] = $d;
+        $d && $data[static::ERRDATA] = $d;
         self::Json($data, $header);
     }
     static function Redirect(int $ret, string $url, string $desc = '', $header = null)

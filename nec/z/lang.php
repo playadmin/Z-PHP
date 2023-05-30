@@ -69,7 +69,7 @@ function GetLang (string $key, string $path = null, array $args = null): string
         if (null === $k || '' === $k) {
             return '?Unknown';
         }
-        return !isset($args[$k]) ? "?{$k}" : $args[$k];
+        return $args[$k] ?? "?{$k}";
     }, $str);
 }
 
