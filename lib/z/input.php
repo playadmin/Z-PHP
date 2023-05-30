@@ -13,9 +13,16 @@ class input {
     LT_GT = 4, GT_LT= 5, // 小于_大于, 大于_小于
     LTEQ_GT = 5, GTEQ_LT= 6, // 小于等于_大于, 大于等于_小于
     LT_GTEQ = 7, GT_LTEQ= 8, // 小于_大于等于, 大于_小于等于
-    BETWEEN = 9, // 小于等于 大于等于
+    BETWEEN = 9, // 大于等于 小于等于
+    GTEQ_LTEQ = 9, // 大于等于 小于等于
     EQ = 10, // 等于
     NEQ = 11, // 不等于
+    IN = 12, // 在数组中
+    IN_UPPER = 13, // 转大写在数组中
+    IN_LOWER = 14, // 转小写在数组中
+    NOTIN = 15, // 不在数组中
+    NOTIN_UPPER = 16, // 转大写不在数组中
+    NOTIN_LOWER = 17, // 转小写不在数组中
 
     LEN = 101, // 字符串长度
     MBLEN = 102,  // utf8编码的字符串的长度
@@ -139,6 +146,12 @@ class input {
             self::MBLEN => self::MbLen($s, ...$args),
             self::NOT_NULL => !!$s,
 
+            self::IN => is_array($s) ? count($s) === self::NumOfIn($s, $args) : in_array($s, $args),
+            self::IN_UPPER => is_array($s) ? count($s) === self::NumOfIn($s, $args, 1) : in_array(strtoupper($s), $args),
+            self::IN_LOWER => is_array($s) ? count($s) === self::NumOfIn($s, $args, -1) : in_array(strtolower($s), $args),
+            self::NOTIN => is_array($s) ? !self::NumOfIn($s, $args) : !in_array($s, $args),
+            self::NOTIN_UPPER => is_array($s) ? !self::NumOfIn($s, $args, 1) : !in_array(strtoupper($s), $args),
+            self::NOTIN_LOWER => is_array($s) ? !self::NumOfIn($s, $args, -1) : !in_array(strtolower($s), $args),
             self::NUMBER => is_numeric($s),
             self::BOOL => self::Vbool($s),
             self::INT => self::Vint($s, $args),
@@ -146,15 +159,36 @@ class input {
             default => self::Is($s, $flag, ...$args),
         };
     }
-    public static function Vbool (string &$s): bool
+    static function NumOfIn (&$vals, &$arr, int $upperORlower = 0): int
     {
-        if (!$s || null === ($a = filter_var($s, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE))) {
+        if (!$vals) {
+            return 0;
+        }
+        $i = 0;
+        if (0 < $upperORlower) {
+            foreach ($vals as $v) {
+                in_array(strtoupper($v), $arr) && ++$i;
+            }
+        } elseif (0 > $upperORlower) {
+            foreach ($vals as $v) {
+                in_array(strtolower($v), $arr) && ++$i;
+            }
+        } else {
+            foreach ($vals as $v) {
+                in_array($v, $arr) && ++$i;
+            }
+        }
+        return $i;
+    }
+    public static function Vbool (&$s): bool
+    {
+        if (null === ($a = filter_var($s, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE))) {
             return false;
         }
         $s = $a;
         return true;
     }
-    public static function Vfloat (string &$s, array $args = []): bool
+    public static function Vfloat (&$s, array $args = []): bool
     {
         $options = [];
         if ($args) {
@@ -167,7 +201,7 @@ class input {
         }
         return $ret;
     }
-    public static function Vint (string &$s, array $args = []): bool
+    public static function Vint (&$s, array $args = []): bool
     {
         $options = [];
         if ($args) {
@@ -345,93 +379,108 @@ class input {
         }
         return false;
     }
-    public static function ParseInt(string|int|array $res, string $dim = ''): int|array
+    public static function ParseInt(string|int|bool|array $res, string $dim = '', callable $filter = null): int|array
     {
         if (is_int($res)) {
             return $res;
         }
         if (is_numeric($res)) {
-            $data = $dim ? [(int)$res] : (int)$res;
-        } elseif (is_array($res)) {
-            foreach($res as $v) {
-                $data[] = (int)$v;
-            }
-        } elseif ($dim && str_contains($res, $dim)) {
-            $arr = explode($dim, $res);
-            foreach($arr as $v) {
-                if (is_numeric($v)) {
-                    $data[] = (int)$v;
+            return $dim ? [(int)$res] : (int)$res;
+        }
+        if (is_array($res) || ($dim && $res = explode($dim, $res))) {
+            $data = [];
+            if ($filter) {
+                foreach($res as $v) {
+                    $v = $filter($v);
+                    null === $v || $data[] = $v;
+                }
+            } else {
+                foreach($res as $v) {
+                    is_numeric($v) && $data[] = (int)$v;
                 }
             }
+            return $data;
         }
-        return $data ?? 0;
+        return 0;
     }
-    public static function ParseFloat(string|array $res, string $dim = ''): int|array
+    public static function ParseFloat(string|array $res, string $dim = '', callable $filter = null): float|array
     {
+        if (is_float($res)) {
+            return $res;
+        }
         if (is_numeric($res)) {
-            $data = $dim ? [(float)$res] : (float)$res;
-        } elseif (is_array($res)) {
-            foreach($res as $v) {
-                $data[] = (float)$v;
-            }
-        } elseif ($dim && str_contains($res, $dim)) {
-            $arr = explode($dim, $res);
-            foreach($arr as $v) {
-                if (is_numeric($v)) {
-                    $data[] = (float)$v;
+            return $dim ? [(float)$res] : (float)$res;
+        }
+        if (is_array($res) || ($dim && $res = explode($dim, $res))) {
+            $data = [];
+            if ($filter) {
+                foreach($res as $v) {
+                    $v = $filter($v);
+                    null === $v || $data[] = $v;
+                }
+            } else {
+                foreach($res as $v) {
+                    is_numeric($v) && $data[] = (float)$v;
                 }
             }
+            return $data;
         }
-        return $data ?? 0;
-    }
-    public static function ParseMoney($res, string $dim = '')
-    {
-        if (is_numeric($res)) {
-            $data = $dim ? [(int)(100 * $res)] : (int)(100 * $res);
-        } elseif (is_array($res)) {
-            foreach($res as $v) {
-                $data[] = (int)$v;
-            }
-        } elseif ($dim && false !== strpos($res, $dim)) {
-            $arr = explode($dim, $res);
-            foreach($arr as $v) {
-                if (is_numeric($v)) {
-                    $data[] = (int)(100 * $v);
-                }
-            }
-        }
-        return $data ?? 0;
+        return 0;
     }
 
-    public static function Get (string $key): string|array|null
+    public static function ParseMoney($res, string $dim = '', callable $filter = null)
     {
-        if (!$key) {
-            return $_GET;
+        if (is_numeric($res)) {
+            return $dim ? [(int)(100 * $res)] : (int)(100 * $res);
         }
-        if (!isset($_GET[$key])) {
+        if (is_array($res) || ($dim && $res = explode($dim, $res))) {
+            $data = [];
+            if ($filter) {
+                foreach($res as $v) {
+                    $v = $filter($v);
+                    null === $v || $data[] = $v;
+                }
+            } else {
+                foreach($res as $v) {
+                    is_numeric($v) && $data[] = (int)(100 * $v);
+                }
+            }
+            return $data;
+        }
+        return 0;
+    }
+
+    public static function Get (string $key, string $dim = '', callable $filter = null): string|array|null
+    {
+        if ($key) {
+            if ($data = $_GET[$key] ?? null) {
+                return $dim ? self::split2array($data, $dim, $filter) : (is_string($data) ? trim($data) : $data);
+            }
+        } else {
+            $data = $_GET;
+        }
+        return $data;
+    }
+    public static function GetInt (string $key, string $dim = '', callable $filter = null): int|array|null
+    {
+        return isset($_GET[$key]) ? self::ParseInt($_GET[$key], $dim, $filter) : null;
+    }
+    public static function GetFloat (string $key, string $dim = '', callable $filter = null): float|array|null
+    {
+        return isset($_GET[$key]) ? self::ParseFloat($_GET[$key], $dim, $filter) : null;
+    }
+    public static function GetMoney (string $key, string $dim = '', callable $filter = null)
+    {
+        return isset($_GET[$key]) ? self::ParseMoney($_GET[$key], $dim, $filter) : null;
+    }
+    public static function GetBool (string $key, bool $toInt = false): bool|int|null
+    {
+        $data = $_GET[$key] ?? null;
+        null === $data || $data = filter_var($data, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
+        if (null === $data) {
             return null;
         }
-        return is_string($_GET[$key]) ? trim($_GET[$key]) : $_GET[$key];
-    }
-    public static function GetInt (string $key, string $dim = ''): int|array|null
-    {
-        return isset($_GET[$key]) ? self::ParseInt($_GET[$key], $dim) : null;
-    }
-    public static function GetFloat (string $key, string $dim = ''): float|array|null
-    {
-        return isset($_GET[$key]) ? self::ParseFloat($_GET[$key], $dim) : null;
-    }
-    public static function GetMoney (string $key, string $dim = '')
-    {
-        return isset($_GET[$key]) ? self::ParseMoney($_GET[$key], $dim) : null;
-    }
-    public static function GetBool (string $key, bool $toInt = false): bool|int
-    {
-        $ret = match(empty($_GET[$key]) ? '' : strtoupper($_GET[$key])) {
-            '1', 'Y', 'ON', 'YES', 'TRUE' => true,
-            default => false,
-        };
-        return $toInt ? (int)$ret : $ret;
+        return $toInt ? (int)$data : !!$data;
     }
 
     public static function Param (string $key): string|array|null
@@ -441,134 +490,172 @@ class input {
         }
         return is_string(ROUTE['params'][$key]) ? trim(ROUTE['params'][$key]) : ROUTE['params'][$key];
     }
-    public static function ParamInt (string $key, string $dim = ''): int|array|null
+    public static function ParamInt (string $key, string $dim = '', callable $filter = null): int|array|null
     {
-        return isset(ROUTE['params'][$key]) ? self::ParseInt(ROUTE['params'][$key], $dim) : null;
+        return isset(ROUTE['params'][$key]) ? self::ParseInt(ROUTE['params'][$key], $dim, $filter) : null;
     }
-    public static function ParamFloat (string $key, string $dim = ''): float|array|null
+    public static function ParamFloat (string $key, string $dim = '', callable $filter = null): float|array|null
     {
-        return isset(ROUTE['params'][$key]) ? self::ParseFloat(ROUTE['params'][$key], $dim) : null;
+        return isset(ROUTE['params'][$key]) ? self::ParseFloat(ROUTE['params'][$key], $dim, $filter) : null;
     }
-    public static function ParamMoney (string $key, string $dim = '')
+    public static function ParamMoney (string $key, string $dim = '', callable $filter = null)
     {
-        return isset(ROUTE['params'][$key]) ? self::ParseMoney(ROUTE['params'][$key], $dim) : null;
+        return isset(ROUTE['params'][$key]) ? self::ParseMoney(ROUTE['params'][$key], $dim, $filter) : null;
     }
-    public static function ParamBool (string $key, bool $toInt = false): bool|int
+    public static function ParamBool (string $key, bool $toInt = false): bool|int|null
     {
-        $ret = match(empty(ROUTE['params'][$key]) ? '' : strtoupper(ROUTE['params'][$key])) {
-            '1', 'Y', 'ON', 'YES', 'TRUE' => true,
-            default => false,
-        };
-        return $toInt ? (int)$ret : $ret;
-    }
-
-    public static function Query (string $key): string|array|null
-    {
-        if (!$key) {
-            return ROUTE['query'] ?? null;
-        }
-        if (!isset(ROUTE['query'][$key])) {
+        $data = ROUTE['params'][$key] ?? null;
+        null === $data || $data = filter_var($data, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
+        if (null === $data) {
             return null;
         }
-        return is_string(ROUTE['query'][$key]) ? trim(ROUTE['query'][$key]) : ROUTE['query'][$key];
-    }
-    public static function QueryInt (string $key, string $dim = ''): int|array|null
-    {
-        return isset(ROUTE['query'][$key]) ? self::ParseInt(ROUTE['query'][$key], $dim) : null;
-    }
-    public static function QueryFloat (string $key, string $dim = ''): float|array|null
-    {
-        return isset(ROUTE['query'][$key]) ? self::ParseFloat(ROUTE['query'][$key], $dim) : null;
-    }
-    public static function QueryMoney (string $key, string $dim = '')
-    {
-        return isset(ROUTE['query'][$key]) ? self::ParseMoney(ROUTE['query'][$key], $dim) : null;
-    }
-    public static function QueryBool (string $key, bool $toInt = false): bool|int
-    {
-        $ret = match(ROUTE['query'][$key] ?? '') {
-            'on', 'On', 'ON', 'true', 'True', 'TRUE' => true,
-            default => false,
-        };
-        return $toInt ? (int)$ret : $ret;
+        return $toInt ? (int)$data : !!$data;
     }
 
-    public static function Path (int $index): string|array|null
+    public static function Query (string $key, string $dim = '', callable $filter = null): string|array|null
+    {
+        if ($key) {
+            $data = ROUTE['query'][$key] ?? null;
+        } else {
+            $data = ROUTE['query'] ?? null;
+        }
+        if ($dim) {
+            return self::split2array($data, $dim, $filter);
+        }
+        is_string($data) && $data = trim($data);
+        return $data;
+    }
+    public static function QueryInt (string $key, string $dim = '', callable $filter = null): int|array|null
+    {
+        return isset(ROUTE['query'][$key]) ? self::ParseInt(ROUTE['query'][$key], $dim, $filter) : null;
+    }
+    public static function QueryFloat (string $key, string $dim = '', callable $filter = null): float|array|null
+    {
+        return isset(ROUTE['query'][$key]) ? self::ParseFloat(ROUTE['query'][$key], $dim, $filter) : null;
+    }
+    public static function QueryMoney (string $key, string $dim = '', callable $filter = null)
+    {
+        return isset(ROUTE['query'][$key]) ? self::ParseMoney(ROUTE['query'][$key], $dim, $filter) : null;
+    }
+    public static function QueryBool (string $key, bool $toInt = false): bool|int|null
+    {
+        $data = ROUTE['query'][$key] ?? null;
+        null === $data || $data = filter_var($data, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
+        if (null === $data) {
+            return null;
+        }
+        return $toInt ? (int)$data : !!$data;
+    }
+    protected static function split2array (string $str, string $dim, callable $filter = null): array
+    {
+        $data = [];
+        $data = explode($dim, $str);
+        if ($data && $filter) {
+            $arr = [];
+            foreach ($data as $d) {
+                $r = $filter($d);
+                null === $r || $arr[] = $r;
+            }
+            return $arr;
+        }
+        return $data;
+    }
+    public static function Path (int $index, string $dim = '', callable $filter = null): string|array|null
     {
         if (0 > $index) {
-            return ROUTE['path'] ?? null;
+            $data = ROUTE['path'] ?? null;
+        } else {
+            $data = ROUTE['path'][$index] ?? null;
         }
-        if (!isset(ROUTE['path'][$index])) {
+        if ($dim) {
+            return self::split2array($data, $dim, $filter);
+        }
+        is_string($data) && $data = trim($data);
+        return $data;
+    }
+    public static function PathInt (int $index, string $dim = '', callable $filter = null): int|array|null
+    {
+        return isset(ROUTE['path'][$index]) ? self::ParseInt(ROUTE['path'][$index], $dim, $filter) : null;
+    }
+    public static function PathFloat (int $index, string $dim = '', callable $filter = null): float|array|null
+    {
+        return isset(ROUTE['path'][$index]) ? self::ParseFloat(ROUTE['path'][$index], $dim, $filter) : null;
+    }
+    public static function PathMoney (string $key, string $dim = '', callable $filter = null)
+    {
+        return isset(ROUTE['path'][$key]) ? self::ParseMoney(ROUTE['path'][$key], $dim, $filter) : null;
+    }
+    public static function PathBool (int $index, bool $toInt = false): bool|int|null
+    {
+        $data = ROUTE['path'][$index] ?? null;
+        null === $data || $data = filter_var($data, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
+        if (null === $data) {
             return null;
         }
-        return is_string(ROUTE['path'][$index]) ? trim(ROUTE['path'][$index]) : ROUTE['path'][$index];
-    }
-    public static function PathInt (int $index, string $dim = ''): int|array|null
-    {
-        return isset(ROUTE['path'][$index]) ? self::ParseInt(ROUTE['path'][$index], $dim) : null;
-    }
-    public static function PathFloat (int $index, string $dim = ''): float|array|null
-    {
-        return isset(ROUTE['path'][$index]) ? self::ParseFloat(ROUTE['path'][$index], $dim) : null;
-    }
-    public static function PathMoney (string $key, string $dim = '')
-    {
-        return isset(ROUTE['path'][$key]) ? self::ParseMoney(ROUTE['path'][$key], $dim) : null;
-    }
-    public static function PathBool (int $index, bool $toInt = false): bool|int
-    {
-        $ret = match(ROUTE['path'][$index] ?? '') {
-            'on', 'On', 'ON', 'true', 'True', 'TRUE' => true,
-            default => false,
-        };
-        return $toInt ? (int)$ret : $ret;
+        return $toInt ? (int)$data : !!$data;
     }
 
-    public static function Input (string $key)
+    public static function Input (string $key, string $dim = '', callable $filter = null)
     {
-        if (!$key) {
-            return match (METHOD) {
+        if ($key) {
+            $data = match (METHOD) {
+                'GET'=>$_GET[$key] ?? null,
+                'POST'=>$_POST[$key] ?? null,
+                default=> INPUT[$key],
+            } ?? $_GET[$key] ?? $_POST[$key] ?? INPUT[$key] ?? null;
+            if (null === $data) {
+                return null;
+            }
+        } else {
+            $data = match (METHOD) {
                 'GET'=>$_GET,
                 'POST'=>$_POST,
                 default=> INPUT,
             };
         }
-        $data = match (METHOD) {
-            'GET'=>$_GET[$key] ?? null,
-            'POST'=>$_POST[$key] ?? null,
-            default=> INPUT,
-        };
-        if (null === $data) {
-            return null;
+        if ($dim && is_string($data)) {
+            return self::split2array($data, $dim, $filter);
         }
-        return is_string($data) ? trim($data) : $data;
+        if ($filter && is_array($data)) {
+            $res = [];
+            foreach ($data as $d) {
+                $r = $filter($d);
+                null === $r || $res[] = $r;
+            }
+            return $res;
+        }
+        is_string($data) && $data = trim($data);
+        return $data;
     }
-    public static function InputInt (string $key, string $dim = ''): int|array|null
+    public static function InputInt (string $key, string $dim = '', callable $filter = null): int|array|null
     {
         $data = match (METHOD) {
             'GET'=>$_GET[$key] ?? null,
             'POST'=>$_POST[$key] ?? null,
             default=> INPUT,
         };
-        return null === $data ? null : self::ParseInt($data, $dim);
+        null === $data && $data = $_GET[$key] ?? null;
+        return null === $data ? null : self::ParseInt($data, $dim, $filter);
     }
-    public static function InputFloat (string $key, string $dim = ''): float|array|null
+    public static function InputFloat (string $key, string $dim = '', callable $filter = null): float|array|null
     {
         $data = match (METHOD) {
             'GET'=>$_GET[$key] ?? null,
             'POST'=>$_POST[$key] ?? null,
             default=> INPUT,
         };
-        return null === $data ? null : self::ParseFloat($data, $dim);
+        null === $data && $data = $_GET[$key] ?? null;
+        return null === $data ? null : self::ParseFloat($data, $dim, $filter);
     }
-    public static function InputMoney (string $key, string $dim = '')
+    public static function InputMoney (string $key, string $dim = '', callable $filter = null)
     {
         $data = match (METHOD) {
             'GET'=>$_GET[$key] ?? null,
             'POST'=>$_POST[$key] ?? null,
             default=> INPUT,
         };
-        return null === $data ? null : self::ParseMoney($data, $dim);
+        null === $data && $data = $_GET[$key] ?? null;
+        return null === $data ? null : self::ParseMoney($data, $dim, $filter);
     }
     public static function InputBool (string $key, bool $toInt = false): bool|int|null
     {
@@ -577,11 +664,11 @@ class input {
             'POST'=>$_POST[$key] ?? null,
             default=> INPUT,
         };
-
+        null === $data && $data = $_GET[$key] ?? null;
         null === $data || $data = filter_var($data, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
         if (null === $data) {
             return null;
         }
-        return $toInt ? (int)$data : $data;
+        return $toInt ? (int)$data : !!$data;
     }
 }

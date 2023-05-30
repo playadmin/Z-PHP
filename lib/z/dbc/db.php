@@ -9,6 +9,7 @@ abstract class db
 {
     use \lib\z\dbc\cache;
     const WRAP_L = '', WRAP_R = '';
+    const SQL_KEYWORDS = ['SELECT'=>true, 'INSERT'=>true, 'UPDATE'=>true, 'DELETE'=>true, 'SET'=>true, 'LIMIT'=>true, 'AND'=>true, 'IS'=>true, 'OR'=>true, 'ON'=>true, 'NOT'=>true, 'ALL'=>true, 'ASC'=>true, 'DESC'=>true, 'UNION'=>true, 'DISTINCT'=>true, 'BETWEEN'=>true, 'LEFT'=>true, 'RIGHT'=>true, 'INNER'=>true, 'OUTER'=>true, 'NATURAL'=>true, 'JOIN'=>true, 'AS'=>true, 'NULL'=>true, 'CASE'=>true, 'IF'=>true, 'WHEN'=>true, 'THEN'=>true, 'END'=>true, 'FROM'=>true, 'WHERE'=>true, 'GROUP'=>true, 'BY'=>true, 'HAVING'=>true, 'ORDER'=>true];
     protected static array $DB_INSTANCE = [];
     protected array $DB_CONFIG = [],
     $DB_BASE = [],
@@ -25,9 +26,12 @@ abstract class db
     $Z_CACHE = [];
 
     protected string $DB_PREFIX = '',
-    $DB_WRAP_FIELD_REPLACE = '',
     $DB_WRAP_L = '',
     $DB_WRAP_R = '',
+    $DB_PREG_WRAP_L = '',
+    $DB_PREG_WRAP_R = '',
+    $DB_PREG_WRAP_LR = '',
+    $DB_PREG_WRAP_SQL = '',
     $DB_TABLE = '',
     $DB_TABLED = '',
     $DB_WHERED = '',
@@ -69,28 +73,50 @@ abstract class db
         $key || $key = md5($cfg['dsn'] ?? '');
         $this->DB_CONFIG = $cfg;
         $this->DB_PREFIX = $cfg['prefix'] ?? '';
-        $this->DB_WRAP_FIELD_REPLACE = '$1' . static::WRAP_L . '$2' . static::WRAP_R;
         $this->DB_WRAP_L = static::WRAP_L;
         $this->DB_WRAP_R = static::WRAP_R;
+        $this->DB_PREG_WRAP_L = preg_quote(static::WRAP_L);
+        $this->DB_PREG_WRAP_R = preg_quote(static::WRAP_R);
+        $this->DB_PREG_WRAP_LR = $this->DB_WRAP_L === $this->DB_WRAP_R ? $this->DB_PREG_WRAP_L : $this->DB_PREG_WRAP_L . $this->DB_PREG_WRAP_R;
+        $this->DB_PREG_WRAP_SQL = "/('(?:\\\'|[^'])+'|\"(?:\\\"|[^\"])+\"|\b[a-zA-Z0-9_]+\s*\.\s*[a-zA-Z0-9_]+\b)|([a-zA-Z0-9_]+\b)(?!\s*[{$this->DB_PREG_WRAP_LR}\(\"\'])/U";
         $table && $this->Table($table);
         if (!empty($this->DB_CONFIG['base'])) {
             $base = IsFullPath($this->DB_CONFIG['base']) ? $this->DB_CONFIG['base'] : P_ROOT . $this->DB_CONFIG['base'];
             is_file($base) && is_array($base = require $base) && $this->DB_BASE = $base;
         }
     }
+
     public function Wrap (string|array $key, string $alias = '')
     {
         if ($alias) {
             return is_array($key) ? $alias . implode(",{$alias}", $key) : $alias . $key;
         }
-        $preg = '/\(.+\)|' . preg_quote($this->DB_WRAP_L) . '\w+' . preg_quote($this->DB_WRAP_R) . '/';
         if (is_array($key)) {
-            $keys = array_map(function ($k) use($preg) {
-                return preg_match($preg, $k) ? $k : $this->DB_WRAP_L . $k . $this->DB_WRAP_R;
+            $keys = array_map(function ($k) {
+                return $this->WrapSql($k);
             }, $key);
             return implode(',', $keys);
         }
-        return preg_match($preg, $key) ? $key : $this->DB_WRAP_L . $key . $this->DB_WRAP_R;
+        return $this->WrapSql($key);
+    }
+    function WrapSql($sql)
+    {
+        return preg_replace_callback($this->DB_PREG_WRAP_SQL, function ($m) {
+            if ($m[1]) {
+                return $m[1];
+            }
+            if (!$v = $m[2]) {
+                return $v;
+            }
+            if (
+                is_numeric($v) ||
+                str_contains($v, '.') ||
+                isset(self::SQL_KEYWORDS[strtoupper($v)])
+            ) {
+                return $v;
+            }
+            return "{$this->DB_WRAP_L}{$v}{$this->DB_WRAP_R}";
+        }, $sql) ?: $sql;
     }
     public function GetConfig (): array
     {
@@ -177,19 +203,19 @@ abstract class db
             if (is_array($fields)) {
                 $this->DB_FIELD = $this->Wrap($fields);
             } else {
-                $this->DB_FIELD = $this->DB_wrapFileds($fields);
+                $this->DB_FIELD = $this->WrapSql($fields);
             }
         }
         return $this;
     }
     public function Group(string $group = ''): static
     {
-        $group && $this->DB_GROUP = $this->DB_wrapFileds($group);
+        $group && $this->DB_GROUP = $this->WrapSql($group);
         return $this;
     }
     public function Order(string $order = ''): static
     {
-        $order && $this->DB_ORDER = $this->DB_wrapFileds($order);
+        $order && $this->DB_ORDER = $this->WrapSql($order);
         return $this;
     }
     public function Limit(string|int $limit = ''): static
@@ -303,7 +329,7 @@ abstract class db
     }
     public function SubQuery(string $field = '', bool $lock = false): string
     {
-        $field && $this->DB_FIELD = $this->DB_wrapFileds($field);
+        $field && $this->DB_FIELD = $this->WrapSql($field);
         list($sql) = $this->Parse(false);
         $lock && $sql = $this->DB_lockRows($sql);
         $this->DB_WHERE = [];
@@ -340,7 +366,7 @@ abstract class db
     public function Truncate (string $table)
     {
         // 防止误操作必须指定$table 而不使用 $this->DB_table()
-        $table = $this->Wrap($table);
+        // $table = $this->Wrap($table);
         $sql = "TRUNCATE TABLE {$table}";
         return $this->PDO->exec($sql);
     }
@@ -401,7 +427,7 @@ abstract class db
     public function Find(string $field = '', bool $lock = false)
     {
         $fetch = \PDO::FETCH_ASSOC;
-        $field && ($this->DB_FIELD = $this->DB_wrapFileds($field)) && $fetch = \PDO::FETCH_COLUMN;
+        $field && ($this->DB_FIELD = $this->WrapSql($field)) && $fetch = \PDO::FETCH_COLUMN;
         $sql = $this->DB_sql();
         $field = $this->DB_field();
         $sql = "SELECT {$field} FROM {$sql}";
@@ -477,7 +503,7 @@ abstract class db
     public function Select(string $field = null, bool $lock = false): array
     {
         $fetch = \PDO::FETCH_ASSOC;
-        $field && ($this->DB_FIELD = $this->DB_wrapFileds($field)) && $fetch = \PDO::FETCH_COLUMN;
+        $field && ($this->DB_FIELD = $this->WrapSql($field)) && $fetch = \PDO::FETCH_COLUMN;
         if ($lock || !$this->Z_CACHE) {
             $field = $this->DB_field();
             $this->DB_PAGE && $this->DB_page();
@@ -648,15 +674,6 @@ abstract class db
         return $val ?? null;
     }
 
-    protected function DB_wrapFileds (string $str): string
-    {
-        $preg = '/(\w+\.)?\b(?<!' . preg_quote($this->DB_WRAP_L) . ')(\w+)(?!' . preg_quote($this->DB_WRAP_R) . ')\b(\s*\()?/';
-        
-        return preg_replace_callback($preg, function ($match) {
-            return isset($match[3]) || (isset($match[2]) && 'AS' === strtoupper($match[2])) ? $match[0] : "{$match[1]}{$this->DB_WRAP_L}{$match[2]}{$this->DB_WRAP_R}";
-        }, $str);
-    }
-
     protected function DB_page(): void
     {
         if (empty($this->DB_PAGE['return'])) {
@@ -781,7 +798,7 @@ abstract class db
             $_key = $this->Wrap($k);
             $keys[] = $_key;
             if ($isSqlValue) {
-                $sets[] = "{$_key} = " . $this->DB_wrapFileds($v);
+                $sets[] = "{$_key} = " . $this->WrapSql($v);
             } else {
                 $bind[] = $v;
                 $sets[] = "{$_key}=?";
@@ -951,7 +968,7 @@ abstract class db
             if (is_array($key)) {
                 $subSql = [];
                 foreach ($key as $kk) {
-                    $subSql[] = $isSqlValue ? $this->DB_bindSqlWhere($kk, $value, $operator) : $this->DB_bindWhere($kk, $value, $operator);
+                    $subSql[] = $isSqlValue ? $this->DB_bindSqlWhere($this->Wrap($key), $value, $operator) : $this->DB_bindWhere($kk, $value, $operator);
                 }
                 $sql && $sql .= " {$logic}";
                 $sql .= '(' . implode(' OR ', $subSql) . ')';
@@ -964,8 +981,7 @@ abstract class db
     }
     protected function DB_bindSqlWhere(string $key, string $value, ?string $operator = null): string
     {
-        $_key = $this->Wrap(trim($key));
-        return $operator ? "{$_key} {$operator} {$value}" : "{$_key} {$value}";
+        return $operator ? "{$key} {$operator} {$value}" : "{$key} {$value}";
     }
 
 
@@ -1001,21 +1017,23 @@ abstract class db
         $isSqlValue = false;
         $operator = '';
         $logic = '';
-        // $preg = '/^(OR\s+|AND\s+)?((\:?\w+)\s*([\<\>\=\!]{0,2})|.+)$/i';
-        $preg = '/^(OR\s+|AND\s+)?([\:\w]+)\s*([\<\>\=\!]{0,2}|(NOT\s+)?(IN|LIKE|BETWEEN))$/i';
+        $preg = '/^(OR\s+|AND\s+)?([\|\:\w.]+)\s*([\<\>\=\!]{0,2}|\s+(NOT\s+)?(IN|LIKE\s+|BETWEEN\s+))$/i';
         if (preg_match($preg, $key, $match)) {
             $logic = empty($match[1]) ? '' : $match[1];
             $keys = $match[2];
             $operator = $match[3] ?? '=';
+            if (1 < count($keys = explode('|', $match[2]))) {
+                ':' === $keys[0][0] && ($isSqlValue = true) && $keys[0] = substr($keys[0], 1);
+                $keys = $this->Wrap($keys);
+            } else {
+                $keys = $match[2];
+                ':' === $keys[0] && ($isSqlValue = true) && $keys = substr($keys, 1);
+            }
         } else {
-            $keys = $key;
+            $keys = $this->WrapSql($key);
+            ':' === $keys[0] && ($isSqlValue = true) && $keys = substr($keys, 1);
         }
         
-        if (':' === $keys[0]) {
-            // [':aa'=>'IS NOT NULL', ':DATE_FORMAT(`dd`, "%Y-%m-%d")'=>'"2022-12-22"' // 字段前加: 表示绑定sql而不是值
-            $isSqlValue || $isSqlValue = true;
-            $keys = substr($keys, 1);
-        }
         return [$isSqlValue, $logic, $keys, $operator];
     }
 }

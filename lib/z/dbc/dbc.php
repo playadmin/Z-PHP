@@ -367,6 +367,7 @@ class stmt {
 
     public function Rows (?int $fetch = null, ?callable $call = null): array
     {
+        // $call(row, index): [key, result]
         null === $fetch && $fetch = \PDO::FETCH_ASSOC;
         $mtime = microtime(true);
         try {
@@ -376,8 +377,9 @@ class stmt {
                 $result = [];
                 $i = 0;
                 while ($r = $this->stmt->fetch($fetch)) {
-                    list($k, $v) = $call($r, $i);
-                    $result[$k] = $v;
+                    if (($res = $call($r, $i)) && is_array($res)) {
+                        $result[$res[0]] = $res[1];
+                    }
                     ++$i;
                 }
             } else {
