@@ -51,6 +51,9 @@ class pdo {
                 $key = md5($c['dsn'] . '|' . ($c['user'] ?? ''));
                 $c['__key'] = $key;
                 $keys[] = $key;
+                empty($c['dbname']) && $c['dbname'] = 'mydb';
+                empty($c['cache_mod']) && $c['cache_mod'] = 'file';
+                empty($c['cache_dir']) && $c['cache_dir'] = 'db';
             }
             $s = md5(implode(',', $keys));
         } else {
@@ -61,6 +64,9 @@ class pdo {
             }
             $key = md5($cfg['dsn'] . '|' . ($cfg['user'] ?? ''));
             $s = $cfg['__key'] = $key;
+            empty($cfg['dbname']) && $cfg['dbname'] = 'mydb';
+            empty($cfg['cache_mod']) && $cfg['cache_mod'] = 'file';
+            empty($cfg['cache_dir']) && $cfg['cache_dir'] = 'db';
         }
         return $s;
     }
@@ -79,7 +85,7 @@ class pdo {
     public function Reader (bool $reConnect = false): \PDO
     {
         if ($this->pdoIndex < 0) {
-            $this->pdoIndex = $this->readerIndexs > 1 ? rand(1, $this->readerIndexs) : $this->readerIndexs;
+            $this->pdoIndex = $this->readerIndexs > 1 ? random_int(1, $this->readerIndexs) : $this->readerIndexs;
         }
         return $this->Conn($this->pdoIndex, $reConnect);
     }

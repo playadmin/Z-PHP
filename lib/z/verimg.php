@@ -116,7 +116,7 @@ class verimg
     private function getCreateImage(): void
     {
         $this->image = imagecreatetruecolor($this->width, $this->height);
-        $backColor = imagecolorallocate($this->image, mt_rand(150, 255), mt_rand(150, 255), mt_rand(150, 255)); //背景色（随机）
+        $backColor = imagecolorallocate($this->image, random_int(150, 255), random_int(150, 255), random_int(150, 255)); //背景色（随机）
         @imagefill($this->image, 0, 0, $backColor);
     }
 
@@ -130,7 +130,7 @@ class verimg
         $code = "3456789abcdefghijkmnpqrstuvwxyABCDEFGHIJKMNPQRSTUVWXY";
         $m = strlen($code) - 1;
         for ($i = 0; $i < $this->codeNum; ++$i) {
-            $char = $code[mt_rand(0, $m)];
+            $char = $code[random_int(0, $m)];
             $str .= $char;
         }
         return $str;
@@ -141,15 +141,15 @@ class verimg
      */
     private function setDisturbColor(): void
     {
-        imagesetthickness($this->image, mt_rand(3, 6));
+        imagesetthickness($this->image, random_int(3, 6));
         for ($i = 0; $i < 3; $i++) {
-            $color = imagecolorallocate($this->image, mt_rand(100, 200), mt_rand(100, 200), mt_rand(100, 200));
-            imagearc($this->image, mt_rand(-10, $this->width - 10), mt_rand(-10, $this->height - 10), mt_rand(30, 2 * $this->width - 4), mt_rand(20, 2 * $this->height), 50, 20, $color);
+            $color = imagecolorallocate($this->image, random_int(100, 200), random_int(100, 200), random_int(100, 200));
+            imagearc($this->image, random_int(-10, $this->width - 10), random_int(-10, $this->height - 10), random_int(30, 2 * $this->width - 4), random_int(20, 2 * $this->height), 50, 20, $color);
         }
         for ($i = 0; $i < 5; $i++) {
-            $char = mt_rand(0, 9);
-            $color = imagecolorallocate($this->image, mt_rand(150, 255), mt_rand(150, 255), mt_rand(150, 255));
-            imagechar($this->image, 5, mt_rand(1, $this->width - 2), mt_rand(1, $this->height - 2), (string)$char, $color);
+            $char = random_int(0, 9);
+            $color = imagecolorallocate($this->image, random_int(150, 255), random_int(150, 255), random_int(150, 255));
+            imagechar($this->image, 5, random_int(1, $this->width - 2), random_int(1, $this->height - 2), (string)$char, $color);
         }
     }
 
@@ -160,10 +160,10 @@ class verimg
     private function outputText(): void
     {
         for ($i = 0; $i != $this->codeNum; ++$i) {
-            $fontcolor = imagecolorallocate($this->image, mt_rand(0, 128), mt_rand(0, 128), mt_rand(0, 128));
-            $ii = mt_rand(-30, 30);
-            $x = $i ? (int)($this->width / $this->codeNum) * $i + mt_rand(-3, 5) : 5;
-            $y = mt_rand(($this->fontSize + 5), ($this->height - 5));
+            $fontcolor = imagecolorallocate($this->image, random_int(0, 128), random_int(0, 128), random_int(0, 128));
+            $ii = random_int(-30, 30);
+            $x = $i ? (int)($this->width / $this->codeNum) * $i + random_int(-3, 5) : 5;
+            $y = random_int(($this->fontSize + 5), ($this->height - 5));
             imagettftext($this->image, $this->fontSize, $ii, $x, $y, $fontcolor, $this->ttf, $this->vercode[$i]);
         }
     }

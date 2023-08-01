@@ -135,8 +135,7 @@ abstract class db
      */
     public function Cache(int $expire = 0, ?string $mod = null): static
     {
-        $mod || $mod = empty($this->DB_CONFIG['cache_mod']) ? 'file' : $this->DB_CONFIG['cache_mod'];
-        empty($this->DB_CONFIG['dbname']) && $this->DB_CONFIG['dbname'] = 'mydb';
+        $mod || $mod = $this->DB_CONFIG['cache_mod'];
         $this->Z_CACHE = [$expire ?: 0, $mod];
         return $this;
     }
