@@ -71,12 +71,14 @@ class input {
     IP = 208, // IP地址(IPv4和IPv6)
     IPV4 = 209, // IPv4地址
     IPV6 = 210,  // IPv6地址
-    TIME = 211;
+    TIME = 211, // 时间 H:i:s
+
+    JSON = 301;
 
     const ENCODES = ['<'=>'&lt;', '>'=>'&gt;', '&'=>'&amp;', '"'=>'&quot;', '\''=>'&apos;'];
     const PREG_LETTER = 'A-Za-z';
     const PREG_BASE = '0-9A-Za-z_';
-    const PREG_NORMAL = '0-9A-Za-z\x{21}-\x{2F}\x{3A}-\x{40}\x{5B}-\x{5E}\x{7B}-\x{7E}`';
+    const PREG_NORMAL = '0-9A-Za-z_\x{21}-\x{2F}\x{3A}-\x{40}\x{5B}-\x{5E}\x{7B}-\x{7E}`';
     const PREG_CTRLS = '\x{00}-\x{08}\x{0E}-\x{7F}';
     const PREG_SPECIAL = '\<\>\'\"&';
     const PREG_SYMBOLS = '\x{21}-\x{2F}\x{3A}-\x{40}\x{5B}-\x{5E}\x{7B}-\x{7E}`';
@@ -115,7 +117,7 @@ class input {
         return null !== $min && null !== $max ? $min <= $len && $max >= $len : (null !== $min ? $min <= $len : $max >= $len);
     }
 
-    public static function Valid (int|float|string|array &$s, int|string|callable $flag, array $args = []): bool
+    public static function Valid (int|bool|float|string|array &$s, int|string|callable $flag, array $args = []): bool
     {
         if (is_array($s)) {
             foreach ($s as $v) {
@@ -325,6 +327,7 @@ class input {
                 self::IP => !!filter_var($str, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4|FILTER_FLAG_IPV6),
                 self::IPV4 => !!filter_var($str, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4),
                 self::IPV6 => !!filter_var($str, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6),
+                self::JSON => $others ? false !== ($str = json_decode($str, true)) : false !== json_decode($str, true),
                 default => throw new Exception('不能识别的过滤标记:' . $flag),
             };
         }
@@ -427,7 +430,6 @@ class input {
         }
         return 0;
     }
-
     public static function ParseMoney($res, string $dim = '', callable $filter = null)
     {
         if (is_numeric($res)) {
@@ -443,6 +445,27 @@ class input {
             } else {
                 foreach($res as $v) {
                     is_numeric($v) && $data[] = (int)(100 * $v);
+                }
+            }
+            return $data;
+        }
+        return 0;
+    }
+    public static function ParseFixed($res, string $dim = '', callable $filter = null)
+    {
+        if (is_numeric($res)) {
+            return $dim ? [(int)(10000 * $res)] : (int)(10000 * $res);
+        }
+        if (is_array($res) || ($dim && $res = explode($dim, $res))) {
+            $data = [];
+            if ($filter) {
+                foreach($res as $v) {
+                    $v = $filter($v);
+                    null === $v || $data[] = $v;
+                }
+            } else {
+                foreach($res as $v) {
+                    is_numeric($v) && $data[] = (int)(10000 * $v);
                 }
             }
             return $data;
@@ -468,6 +491,10 @@ class input {
     public static function GetFloat (string $key, string $dim = '', callable $filter = null): float|array|null
     {
         return isset($_GET[$key]) ? self::ParseFloat($_GET[$key], $dim, $filter) : null;
+    }
+    public static function GetFixed (string $key, string $dim = '', callable $filter = null): float|array|null
+    {
+        return isset($_GET[$key]) ? self::ParseFixed($_GET[$key], $dim, $filter) : null;
     }
     public static function GetMoney (string $key, string $dim = '', callable $filter = null)
     {
@@ -497,6 +524,10 @@ class input {
     public static function ParamFloat (string $key, string $dim = '', callable $filter = null): float|array|null
     {
         return isset(ROUTE['params'][$key]) ? self::ParseFloat(ROUTE['params'][$key], $dim, $filter) : null;
+    }
+    public static function ParamFixed (string $key, string $dim = '', callable $filter = null): float|array|null
+    {
+        return isset(ROUTE['params'][$key]) ? self::ParseFixed(ROUTE['params'][$key], $dim, $filter) : null;
     }
     public static function ParamMoney (string $key, string $dim = '', callable $filter = null)
     {
@@ -532,6 +563,10 @@ class input {
     public static function QueryFloat (string $key, string $dim = '', callable $filter = null): float|array|null
     {
         return isset(ROUTE['query'][$key]) ? self::ParseFloat(ROUTE['query'][$key], $dim, $filter) : null;
+    }
+    public static function QueryFixed (string $key, string $dim = '', callable $filter = null): float|array|null
+    {
+        return isset(ROUTE['query'][$key]) ? self::ParseFixed(ROUTE['query'][$key], $dim, $filter) : null;
     }
     public static function QueryMoney (string $key, string $dim = '', callable $filter = null)
     {
@@ -580,6 +615,10 @@ class input {
     public static function PathFloat (int $index, string $dim = '', callable $filter = null): float|array|null
     {
         return isset(ROUTE['path'][$index]) ? self::ParseFloat(ROUTE['path'][$index], $dim, $filter) : null;
+    }
+    public static function PathFixed (int $index, string $dim = '', callable $filter = null): float|array|null
+    {
+        return isset(ROUTE['path'][$index]) ? self::ParseFixed(ROUTE['path'][$index], $dim, $filter) : null;
     }
     public static function PathMoney (string $key, string $dim = '', callable $filter = null)
     {
@@ -646,6 +685,16 @@ class input {
         };
         null === $data && $data = $_GET[$key] ?? null;
         return null === $data ? null : self::ParseFloat($data, $dim, $filter);
+    }
+    public static function InputFixed (string $key, string $dim = '', callable $filter = null): float|array|null
+    {
+        $data = match (METHOD) {
+            'GET'=>$_GET[$key] ?? null,
+            'POST'=>$_POST[$key] ?? null,
+            default=> INPUT,
+        };
+        null === $data && $data = $_GET[$key] ?? null;
+        return null === $data ? null : self::ParseFixed($data, $dim, $filter);
     }
     public static function InputMoney (string $key, string $dim = '', callable $filter = null)
     {

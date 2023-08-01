@@ -6,8 +6,10 @@ use lib\z\cache as c;
 
 trait cache
 {
-    function GetCache (string $mod, string $dbname, string $table, string $key)
+    function GetCache (string $mod = '', string $dbname = '', string $table, string $key)
     {
+        $mod || $mod = $this->DB_CONFIG['cache_mod'];
+        $dbname || $dbname = $this->DB_CONFIG['dbname'];
         return match ($mod) {
             'file'=>$this->getFileCache($this->cacheDir($dbname, $table), $key),
             'redis'=>c::R("DB:{$dbname}:{$table}:{$key}"),
@@ -15,20 +17,25 @@ trait cache
         };
     }
 
-    function SetCache (string $mod, string $dbname, string $table, string $key, $data, int $expire = 0)
-    {   return match ($mod) {
+    function SetCache (string $mod = '', string $dbname = '', string $table, string $key, $data, int $expire = 0)
+    {   
+        $mod || $mod = $this->DB_CONFIG['cache_mod'];
+        $dbname || $dbname = $this->DB_CONFIG['dbname'];
+        return match ($mod) {
             'file'=>$this->setFileCache($this->cacheDir($dbname, $table), $key, $data, $expire),
             'redis'=>c::R("DB:{$dbname}:{$table}:{$key}", $data, $expire),
             'memcached'=>c::M("DB:{$dbname}:{$table}:{$key}", $data, $expire),
         };
     }
 
-    protected function cacheDir (string $dbname, string $table = '')
+    protected function cacheDir (string $dbname = '', string $table = '')
     {
-        return P_CACHE . "db/{$dbname}/{$table}";
+        $dbname || $dbname = $this->DB_CONFIG['dbname'];
+        return P_CACHE . "{$this->DB_CONFIG['cache_dir']}/{$dbname}/{$table}";
     }
-    function CleanCache (string $mod, string $dbname, string $table = '')
+    function CleanCache (string $mod = '', string $dbname, string $table = '')
     {
+        $mod || $mod = $this->DB_CONFIG['cache_mod'];
         switch ($mod) {
             case 'redis':
                 return $this->delRedis($dbname, $table);
@@ -41,13 +48,15 @@ trait cache
                 break;
         }
     }
-    private function delFile(string $dbname, string $table = '')
+    private function delFile(string $dbname = '', string $table = '')
     {
+        $dbname || $dbname = $this->DB_CONFIG['dbname'];
         $dir = $this->cacheDir($dbname, $table);
         return DelDir($dir, true);
     }
-    protected function delRedis (string $dbname, string $table = ''): int
+    protected function delRedis (string $dbname = '', string $table = ''): int
     {
+        $dbname || $dbname = $this->DB_CONFIG['dbname'];
         $path = "DB:{$dbname}:";
         $table && $path .= "{$table}:";
         $redis = cache::Redis();
@@ -63,8 +72,9 @@ trait cache
         }
         return $result;
     }
-    protected function delMemcached($dbname, $table)
+    protected function delMemcached($dbname = '', $table)
     {
+        $dbname || $dbname = $this->DB_CONFIG['dbname'];
         $path = "DB:{$dbname}:";
         $table && $path .= "{$table}:";
         $preg = "/^{$path}.+$/i";
@@ -83,7 +93,7 @@ trait cache
     protected function getFileCache (string $dir, $key)
     {
         $file = "{$dir}/{$key}.php";
-        list($data, $expire) = c::GetExpireFileCache($file, c::CODE_PHP_ARR, true);
+        list($data, $expire) = c::GetExpireFileCache($file, c::CODE_PHP_ARR);
         if ($expire && $expire < TIME) {
             return null;
         }

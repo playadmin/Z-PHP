@@ -6,7 +6,7 @@ function AppRun(string $entry, array $nec = null): void
     define('FTIME', microtime(true));
     define('TIME', (int)FTIME);
     define('STIME', (int)(1000 * FTIME));
-    define('ZPHP_VER', '5.0.0');
+    define('ZPHP_VER', '5.0.1');
     define('FILE_CORE', str_replace('\\', '/', __FILE__));
     $php = explode('/', trim($_SERVER['SCRIPT_NAME'], '/'));
     define('PHP_FILE', array_pop($php));
