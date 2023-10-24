@@ -185,7 +185,7 @@ class view
         $run[1] = explode('.', $name)[0];
         return $run;
     }
-    public static function Fetch(string $name = '')
+    public static function Fetch(string $name = '', $isDisplay = false)
     {
         if (self::$DISPLAY_TPL && self::$RUN) {
             $tpl = self::$DISPLAY_TPL;
@@ -236,7 +236,10 @@ class view
                 }
             }
         }
-        self::$PARAMS && extract(self::$PARAMS);
+        if (self::$PARAMS) {
+            (!$isDisplay || self::$CACHE) && self::checkTplParams(self::$PARAMS);
+            extract(self::$PARAMS);
+        }
         self::$TPL = null;
         ob_start() && require $run_file;
         $html = ob_get_contents();
@@ -250,6 +253,17 @@ class view
             }
         }
         return $html;
+    }
+
+    private static function checkTplParams (&$params)
+    {
+        foreach ($params as &$v) {
+            if (is_array($v)) {
+                self::checkTplParams($v);
+            } elseif (is_string($v)) {
+                $v = str_replace(['<?', '?>'], ['&lt;?', '?&gt;'], $v);
+            }
+        }
     }
 
     public static function GetCache($time, $name = '', $flag = 0)
