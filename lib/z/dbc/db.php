@@ -92,9 +92,14 @@ abstract class db
             return is_array($key) ? $alias . implode(",{$alias}", $key) : $alias . $key;
         }
         if (is_array($key)) {
-            $keys = array_map(function ($k) {
-                return $this->WrapSql($k);
-            }, $key);
+            $keys = [];
+            foreach ($key as $k=>$v) {
+                if (is_int($k)) {
+                    $keys[] = $this->WrapSql($v);
+                } else {
+                    $keys[] = $this->WrapSql($k) . " AS {$this->DB_PREG_WRAP_L}{$v}{$this->DB_PREG_WRAP_R}";
+                }
+            }
             return implode(',', $keys);
         }
         return $this->WrapSql($key);
@@ -185,7 +190,7 @@ abstract class db
     }
     public function Tmp(string $sql, string $alias = 'z'): static
     {
-        $this->DB_TMP = "({$sql}) AS {$alias}";
+        $this->DB_TMP = "({$sql}) AS {$this->DB_PREG_WRAP_L}{$alias}{$this->DB_PREG_WRAP_R}";
         return $this;
     }
     public function Table(string $table): static
@@ -423,10 +428,14 @@ abstract class db
         $this->DB_done();
         return $stmt;
     }
-    public function Find(string $field = '', bool $lock = false)
+    public function Find(string | bool $field = false, bool $lock = false)
     {
-        $fetch = \PDO::FETCH_ASSOC;
-        $field && ($this->DB_FIELD = $this->WrapSql($field)) && $fetch = \PDO::FETCH_COLUMN;
+        if ($field) {
+            $fetch = \PDO::FETCH_COLUMN;
+            is_bool($field) || $this->DB_FIELD = $this->WrapSql($field);
+        } else {
+            $fetch = \PDO::FETCH_ASSOC;
+        }
         $sql = $this->DB_sql();
         $field = $this->DB_field();
         $sql = "SELECT {$field} FROM {$sql}";
@@ -499,10 +508,14 @@ abstract class db
         }
         return $result;
     }
-    public function Select(string $field = null, bool $lock = false): array
+    public function Select(string | bool $field = false, bool $lock = false): array
     {
-        $fetch = \PDO::FETCH_ASSOC;
-        $field && ($this->DB_FIELD = $this->WrapSql($field)) && $fetch = \PDO::FETCH_COLUMN;
+        if ($field) {
+            $fetch = \PDO::FETCH_COLUMN;
+            is_bool($field) || $this->DB_FIELD = $this->WrapSql($field);
+        } else {
+            $fetch = \PDO::FETCH_ASSOC;
+        }
         if ($lock || !$this->Z_CACHE) {
             $field = $this->DB_field();
             $this->DB_PAGE && $this->DB_page();

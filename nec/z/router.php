@@ -56,6 +56,7 @@ class router
             $route['query'] = isset($route['params']) ? $route['params'] + $_GET : $_GET;
             $route['uri'] = $_SERVER['REQUEST_URI'];
             $route['app'] = APP_NAME;
+            $route['mod'] = self::$MOD;
             define('ROUTE', $route);
         });
     }
