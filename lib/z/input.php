@@ -639,9 +639,9 @@ class input {
         if ($key) {
             $data = match (METHOD) {
                 'GET'=>$_GET[$key] ?? null,
-                'POST'=>$_POST[$key] ?? null,
-                default=> INPUT[$key],
-            } ?? $_GET[$key] ?? $_POST[$key] ?? INPUT[$key] ?? null;
+                'POST'=>$_POST[$key] ?? $_GET[$key] ?? null,
+                default=> INPUT[$key] ?? $_GET[$key] ?? null,
+            };
             if (null === $data) {
                 return null;
             }
@@ -670,50 +670,45 @@ class input {
     {
         $data = match (METHOD) {
             'GET'=>$_GET[$key] ?? null,
-            'POST'=>$_POST[$key] ?? null,
-            default=> INPUT,
+            'POST'=>$_POST[$key] ?? $_GET[$key] ?? null,
+            default=> INPUT[$key] ?? $_GET[$key] ?? null,
         };
-        null === $data && $data = $_GET[$key] ?? null;
         return null === $data ? null : self::ParseInt($data, $dim, $filter);
     }
     public static function InputFloat (string $key, string $dim = '', callable $filter = null): float|array|null
     {
         $data = match (METHOD) {
             'GET'=>$_GET[$key] ?? null,
-            'POST'=>$_POST[$key] ?? null,
-            default=> INPUT,
+            'POST'=>$_POST[$key] ?? $_GET[$key] ?? null,
+            default=> INPUT[$key] ?? $_GET[$key] ?? null,
         };
-        null === $data && $data = $_GET[$key] ?? null;
         return null === $data ? null : self::ParseFloat($data, $dim, $filter);
     }
     public static function InputFixed (string $key, string $dim = '', callable $filter = null): float|array|null
     {
         $data = match (METHOD) {
             'GET'=>$_GET[$key] ?? null,
-            'POST'=>$_POST[$key] ?? null,
-            default=> INPUT,
+            'POST'=>$_POST[$key] ?? $_GET[$key] ?? null,
+            default=> INPUT[$key] ?? $_GET[$key] ?? null,
         };
-        null === $data && $data = $_GET[$key] ?? null;
         return null === $data ? null : self::ParseFixed($data, $dim, $filter);
     }
     public static function InputMoney (string $key, string $dim = '', callable $filter = null)
     {
         $data = match (METHOD) {
             'GET'=>$_GET[$key] ?? null,
-            'POST'=>$_POST[$key] ?? null,
-            default=> INPUT,
+            'POST'=>$_POST[$key] ?? $_GET[$key] ?? null,
+            default=> INPUT[$key] ?? $_GET[$key] ?? null,
         };
-        null === $data && $data = $_GET[$key] ?? null;
         return null === $data ? null : self::ParseMoney($data, $dim, $filter);
     }
     public static function InputBool (string $key, bool $toInt = false): bool|int|null
     {
         $data = match (METHOD) {
             'GET'=>$_GET[$key] ?? null,
-            'POST'=>$_POST[$key] ?? null,
-            default=> INPUT,
+            'POST'=>$_POST[$key] ?? $_GET[$key] ?? null,
+            default=> INPUT[$key] ?? $_GET[$key] ?? null,
         };
-        null === $data && $data = $_GET[$key] ?? null;
         null === $data || $data = filter_var($data, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE);
         if (null === $data) {
             return null;

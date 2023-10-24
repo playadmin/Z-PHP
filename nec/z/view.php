@@ -211,6 +211,17 @@ class view
         }
     }
 
+    private static function checkTplParams (&$params)
+    {
+        foreach ($params as &$v) {
+            if (is_array($v)) {
+                self::checkTplParams($v);
+            } elseif (is_string($v)) {
+                $v = str_replace(['<?', '?>'], ['&lt;?', '?&gt;'], $v);
+            }
+        }
+    }
+
     public static function GetRun (string $tpl): array
     {
         $arr = explode('/', $tpl);
@@ -218,9 +229,12 @@ class view
         $name = $arr[$len - 1];
         return [P_RUN . APP_NAME . '/' . THEME, $arr[$len - 2] . '/' . explode('.', $name)[0] . '.php'];
     }
-    public static function Fetch(string $filename = ''): string
+    public static function Fetch(string $filename = '', bool $isDisplay = false): string
     {
-        self::$PARAMS && extract(self::$PARAMS);
+        if (self::$PARAMS) {
+            $isDisplay || self::checkTplParams(self::$PARAMS);
+            extract(self::$PARAMS);
+        }
         ob_start() && require self::GetCompile($filename);
         return ob_get_clean();
     }
@@ -427,7 +441,7 @@ class view
                     $var = '$var';
                 }
                 $code = str_contains($var, ',') ? "list({$var})=" : "{$var}=";
-                $code .= $call . '(' . ExportArray($args, false) . ');?';
+                $code .= $call . '(' . ExportArray($args) . ');?';
             } else {
                 list($pre, $dd) = $call($attrs, $args);
                 $code = $pre . '?';
@@ -480,7 +494,10 @@ class view
     {
         if (self::$CACHE) {
             $ret = cache::SetFileCache(self::$CACHE[1], function (): string {
-                self::$PARAMS && extract(self::$PARAMS);
+                if (self::$PARAMS) {
+                    self::checkTplParams(self::$PARAMS);
+                    extract(self::$PARAMS);
+                }
                 ob_start() && require self::GetCompile(self::$CACHE[0]);
                 return ob_get_clean();
             });

@@ -33,7 +33,7 @@ trait cache
         $dbname || $dbname = $this->DB_CONFIG['dbname'];
         return P_CACHE . "{$this->DB_CONFIG['cache_dir']}/{$dbname}/{$table}";
     }
-    function CleanCache (string $mod = '', string $dbname, string $table = '')
+    function CleanCache (string $mod = '', string $dbname, string $table = ''): int
     {
         $mod || $mod = $this->DB_CONFIG['cache_mod'];
         switch ($mod) {
@@ -44,11 +44,11 @@ trait cache
                 return $this->delMemcached($dbname, $table);
                 break;
             default:
-                return $this->delFile($dbname, $table);
+                return (int)($this->delFile($dbname, $table));
                 break;
         }
     }
-    private function delFile(string $dbname = '', string $table = '')
+    private function delFile(string $dbname = '', string $table = ''): int | false
     {
         $dbname || $dbname = $this->DB_CONFIG['dbname'];
         $dir = $this->cacheDir($dbname, $table);
@@ -72,7 +72,7 @@ trait cache
         }
         return $result;
     }
-    protected function delMemcached($dbname = '', $table)
+    protected function delMemcached($dbname = '', $table): int
     {
         $dbname || $dbname = $this->DB_CONFIG['dbname'];
         $path = "DB:{$dbname}:";

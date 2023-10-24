@@ -58,8 +58,11 @@ function AppRun(string $entry, array $nec = null): void
     
     if (!defined('ROUTE')) {
         $router = [
+            'mod'=>0,
             'ctrl' => empty($_GET['c']) ? 'index' : $_GET['c'],
             'act' => empty($_GET['a']) ? 'index' : $_GET['a'],
+            'uri' => $_SERVER['REQUEST_URI'],
+            'query'=> $_GET,
         ];
         empty($GLOBALS['ZPHP_CONFIG']['ROUTER']['module']) || $router['module'] = empty($_GET['m']) ? 'index' : $_GET['m'];
         define('ROUTE', $router);
@@ -145,40 +148,54 @@ function ArrayIsList (&$arr) {
     }
     return $isList;
 }
-function ExportArray ($arr, $quoteValStr = true, $quoteKeyStr = true) {
-    if (!is_array($arr) && !is_object($arr)) {
-        return var_export($arr, true);
-    }
-    if (!$arr || (!is_array($arr) && !$arr = (array)$arr)) {
+function ExportArray (array $arr, bool $escape = false, string $indent = '', $prefix = '', $indentNum = 0, $forceStringValue = true) {
+    if (!$arr) {
         return '[]';
+    }
+
+    if ($escape) {
+        $search = ["'", "\n","\t","\r","\f","\\","\v"];
+        $replace = ["\'", '\n','\t','\r','\f','\\','\v'];
+    } else {
+        $search = "'";
+        $replace = "\'";
     }
 
     if (ArrayIsList($arr)) {
         foreach($arr as $v) {
             if (is_array($v)) {
-                $slice[] = ExportArray($v);
+                $slice[] = ExportArray($v, $escape, $indent, $prefix, 1 + $indentNum, $forceStringValue);
             } elseif (null === $v) {
                 $slice[] = 'null';
             } else {
-                $quoteValStr && is_string($v) && $v = "'" . str_replace("'", "\'", $v) . "'";
+                ($forceStringValue || is_string($v)) && $v = "'" . str_replace($search, $replace, $v) . "'";
                 $slice[] = $v;
             }
         }
     } else {
         foreach($arr as $k=>$v) {
-            is_string($k) &&  $k = str_replace(["'", '"'], ["\'", '\"'], $k);
-            $key = $quoteKeyStr && is_string($k) ? "'{$k}'=>" : "{$k}=>";
+            if (is_string($k)) {
+                $k = str_replace($search, $replace, $k);
+                $key = "'{$k}'=>";
+            } else {
+                $key = "{$k}=>";
+            }
             if (is_array($v)) {
-                $slice[] = $key . ExportArray($v);
+                $slice[] = $key . ExportArray($v, $escape, $indent, $prefix, 1 + $indentNum, $forceStringValue);
             } elseif (null === $v) {
                 $slice[] = "{$key}null";
             } else {
-                $quoteValStr && is_string($v) && $v = "'" . str_replace("'", "\'", $v) . "'";
+                ($forceStringValue || is_string($v)) && $v = "'" . str_replace($search, $replace, $v) . "'";
                 $slice[] = $key . $v;
             }
         }
     }
-    return '[' . implode(',', $slice) . ']';
+    if ($indent) {
+        $pre = $prefix . str_repeat($indent, $indentNum);
+        return "[\n{$pre}{$indent}" . implode(",\n{$pre}{$indent}", $slice) . "\n{$pre}]";
+    } else {
+        return '[' . implode(',', $slice) . ']';
+    }
 }
 function P($var, bool $echo = true): string
 {
@@ -271,7 +288,7 @@ function Page($cfg, $return = false): array
         $var = $cfg['var'] ?? 'p';
         $mod = $cfg['mod'] ?? null;
         $nourl = $cfg['nourl'] ?? 'javascript:;';
-        $params = ROUTE['params'] ?? false;
+        $params = ROUTE['params'] ?? [];
         $query = $_GET;
         foreach ($return as $v) {
             switch ($v) {
