@@ -387,7 +387,7 @@ abstract class db
         } else {
             $result = $this->PDO->Stmt("SELECT COUNT({$field}) FROM {$from}", $this->DB_BIND)->Row(\PDO::FETCH_COLUMN);
         }
-        $done && $this->DB_done();
+        $done ? $this->DB_done() : $this->DB_SQLD = '';
         return (int)$result;
     }
     public function Merge(string $sql, string|array $type = ''): static
@@ -950,7 +950,7 @@ abstract class db
                 $this->DB_BIND[$k] = $v;
             }
         }
-        return $where;
+        return $this->WrapSql($where);
     }
 
     protected function DB_whereArr(array $where): array
@@ -958,6 +958,18 @@ abstract class db
         $sql = '';
         $lc = '';
         foreach ($where as $k => $value) {
+            if (is_int($k)) {
+                // 键名不是字段的情况
+                $pre = strtoupper(trim(substr($value, 0, 3)));
+                if ('AND' === $pre || 'OR' === $pre) {
+                    $lc || $lc = "{$pre} ";
+                    return [$this->WrapSql($value), ''];
+                } else {
+                    $lc || $lc = 'AND ';
+                    return [$this->WrapSql($value), $lc];
+                }
+            }
+
             list($isSqlValue, $logic, $key, $operator) = $this->DB_checkKey($k);
             $logic || $logic = 'AND ';
             $lc || $lc = $logic;

@@ -167,6 +167,10 @@ function ExportArray (array $arr, bool $escape = false, string $indent = '', $pr
                 $slice[] = ExportArray($v, $escape, $indent, $prefix, 1 + $indentNum, $forceStringValue);
             } elseif (null === $v) {
                 $slice[] = 'null';
+            } elseif (true === $v) {
+                $slice[] = 'true';
+            } elseif (false === $v) {
+                $slice[] = 'false';
             } else {
                 ($forceStringValue || is_string($v)) && $v = "'" . str_replace($search, $replace, $v) . "'";
                 $slice[] = $v;
@@ -184,6 +188,10 @@ function ExportArray (array $arr, bool $escape = false, string $indent = '', $pr
                 $slice[] = $key . ExportArray($v, $escape, $indent, $prefix, 1 + $indentNum, $forceStringValue);
             } elseif (null === $v) {
                 $slice[] = "{$key}null";
+            } elseif (true === $v) {
+                $slice[] = "{$key}true";
+            } elseif (false === $v) {
+                $slice[] = "{$key}false";
             } else {
                 ($forceStringValue || is_string($v)) && $v = "'" . str_replace($search, $replace, $v) . "'";
                 $slice[] = $key . $v;
