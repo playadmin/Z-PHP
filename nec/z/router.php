@@ -426,7 +426,6 @@ class router
         }
         isset($route['module']) || isset($info['module']) && $route['module'] = $info['module'];
         if (isset($route['params'])) {
-            $ii = 0;
             $n = 0;
             $ii = 0;
             foreach ($route['params'] as $k => $v) {
