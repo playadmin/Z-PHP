@@ -11,10 +11,10 @@ view::setup();
 class view
 {
     const
-    ENCODE_PREFIX = 'z-php-encode.', ENCODE_END_CHAR = '.',
-    OPTIONS = LIBXML_NSCLEAN + LIBXML_PARSEHUGE + LIBXML_NOBLANKS + LIBXML_NOERROR + LIBXML_HTML_NODEFDTD + LIBXML_ERR_FATAL + LIBXML_COMPACT;
+    ENCODE_PREFIX = '!z-php-encode.', ENCODE_END_CHAR = '.!',
+    OPTIONS = LIBXML_NSCLEAN + LIBXML_PARSEHUGE + LIBXML_NOBLANKS + LIBXML_NOERROR + LIBXML_HTML_NODEFDTD + LIBXML_ERR_FATAL + LIBXML_COMPACT + LIBXML_NOXMLDECL;
     private static \DOMDocument|null $DOM = null;
-    private static array $TAG = [], $TPLDOM = [], $PARAMS = [], $REPLACE = [], $PREG_FIX = [], $CACHE = [];
+    private static array $TAG = [], $TPLDOM = [], $PARAMS = [], $REPLACE = [], $CACHE = [];
     private static string $PRE = '', $SUF = '', $PREG_CODE = '';
     private static int $CHANGED = 0;
 
@@ -29,21 +29,25 @@ class view
     }
     private static function replaceEncode(string $html): string
     {
-        $preg = '/\<\w+\s+[^>]*'.self::$PREG_CODE.'[^<]+\>/';
         $pregCode = '/'.self::$PREG_CODE.'/U';
-        $html = preg_replace_callback($preg, function (array $match) use($pregCode): string {
-            return preg_replace_callback($pregCode, function (array $m2) {
-                $code = trim($m2[1]);
-                $i = array_push(self::$REPLACE, "<?php echo {$code};?>") - 1;
-                return self::ENCODE_PREFIX . $i . self::ENCODE_END_CHAR;
-            }, $match[0]);
+        $html = preg_replace_callback($pregCode, function (array $m) {
+            $code = trim($m[1]);
+            $i = array_push(self::$REPLACE, "<?php echo {$code};?>") - 1;
+            return self::ENCODE_PREFIX . $i . self::ENCODE_END_CHAR;
         }, $html);
+
+        $pregPHP = '/\<\?php((?<!\?\>)[\s\S]+)\?\>/U';
+        $html = preg_replace_callback($pregPHP, function (array $m) {
+            $i = array_push(self::$REPLACE, $m[0]) - 1;
+            return self::ENCODE_PREFIX . $i . self::ENCODE_END_CHAR;
+        }, $html);
+
         $pregSymbol = '/(\s+[@#&$]+\w+)\s*(?==\s*["\'])/';
         $html = preg_replace_callback($pregSymbol, function (array $m) {
             $i = array_push(self::$REPLACE, $m[1]) - 1;
             return self::ENCODE_PREFIX . $i . self::ENCODE_END_CHAR;
         }, $html);
-        return preg_replace(self::$PREG_FIX, ['<?php echo ', ';?>'], $html);
+        return $html;
     }
     private static function replaceDecode(string $html): string
     {
@@ -107,7 +111,6 @@ class view
         $time = filemtime($file);
         $time > self::$CHANGED && self::$CHANGED = $time;
         $html = self::replaceEncode(file_get_contents($file));
-        // $html = '<?xml encoding="UTF-8">' . (str_contains($html, '<' . self::$TAG['template']) ? $html : '<' . self::$TAG['template'] . '>' . $html . '</' . self::$TAG['template'] . '>');
         $dom = new \DOMDocument('1.0', 'UTF-8');
         $dom->loadHTML('<?xml encoding="UTF-8">' . $html, self::OPTIONS);
         DEBUGER && 2 < $GLOBALS['ZPHP_CONFIG']['DEBUG']['level'] && (DEBUGER)::setMsg(1140, $file);
@@ -121,7 +124,7 @@ class view
                 $params = explode(',', $params);
                 foreach($params as $v) {
                     $p = explode(':', $v);
-                    $d[$p[0]] = $p[1] ?? null;
+                    $d[$p[0]] = $p[1] ?? true;
                 }
                 self::$TPLDOM[$file][$name][1] = $d;
             } else {
@@ -264,7 +267,6 @@ class view
         $pregPre = preg_quote(self::$PRE);
         $pregSuf = preg_quote(self::$SUF);
         self::$PREG_CODE = "{$pregPre}([\s\S]+){$pregSuf}";
-        self::$PREG_FIX = ["/\s*{$pregPre}\s*/", "/\s*{$pregSuf}\s*/"];
 
         $flag = '<meta flag="ZPHP-UTF-8" http-equiv="Content-Type" content="text/html; charset=utf-8">';
         $html = self::replaceEncode(file_get_contents($tpl));

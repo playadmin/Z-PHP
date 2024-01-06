@@ -167,6 +167,9 @@ abstract class db
     public function GetSql (): string {
         return $this->PDO->GetSql();
     }
+    public function GetParams (): array {
+        return $this->PDO->GetParams();
+    }
     public function Begin(): bool
     {
         $this->DB_CALL = [];
@@ -324,7 +327,7 @@ abstract class db
     }
     public function Parse ($reset = true): array
     {
-        $sql = $this->DB_sql();
+        $sql = $this->DB_sql(true);
         $field = $this->DB_field();
         $res[] = "SELECT {$field} FROM " . $sql;
         $res[] = $this->DB_BIND;
@@ -387,7 +390,7 @@ abstract class db
         } else {
             $result = $this->PDO->Stmt("SELECT COUNT({$field}) FROM {$from}", $this->DB_BIND)->Row(\PDO::FETCH_COLUMN);
         }
-        $done ? $this->DB_done() : $this->DB_SQLD = '';
+        $done && $this->DB_done();
         return (int)$result;
     }
     public function Merge(string $sql, string|array $type = ''): static
@@ -519,7 +522,7 @@ abstract class db
         if ($lock || !$this->Z_CACHE) {
             $field = $this->DB_field();
             $this->DB_PAGE && $this->DB_page();
-            $sql = "SELECT {$field} FROM " . $this->DB_sql();
+            $sql = "SELECT {$field} FROM " . $this->DB_sql(!!$this->DB_PAGE);
             $lock && $sql = $this->DB_lockRows($sql);
             if (null === $sql) {
                 throw new Exception('Row lock is not supported');
@@ -960,14 +963,14 @@ abstract class db
         foreach ($where as $k => $value) {
             if (is_int($k)) {
                 // 键名不是字段的情况
-                $pre = strtoupper(trim(substr($value, 0, 3)));
-                if ('AND' === $pre || 'OR' === $pre) {
-                    $lc || $lc = "{$pre} ";
-                    return [$this->WrapSql($value), ''];
-                } else {
-                    $lc || $lc = 'AND ';
-                    return [$this->WrapSql($value), $lc];
+                if (!$sql) {
+                    $pre = strtoupper(substr($value, 0, 3));
+                    if ('AND' === $pre || 'OR ' === $pre) {
+                        $value = ltrim(substr($value, 3));
+                    }
                 }
+                $sql .= $this->WrapSql($value);
+                continue;
             }
 
             list($isSqlValue, $logic, $key, $operator) = $this->DB_checkKey($k);
@@ -981,7 +984,7 @@ abstract class db
                     '<>', '!=' => 'NOT IN',
                     default => $operator ?: 'IN',
                 };
-            } elseif (is_string($value) && 'SELECT' === strtoupper(substr($value, 0, 6))) {
+            } elseif ($isSqlValue && is_string($value) && preg_match('/^SELECT\s/i', $value)) {
                 // 包含子查询
                 $operator || $operator = 'IN';
                 $sql && $sql .= " {$logic}";
@@ -1041,14 +1044,13 @@ abstract class db
         $isSqlValue = false;
         $operator = '';
         $logic = '';
-        $preg = '/^(OR\s+|AND\s+)?([\|\:\w.]+)\s*([\<\>\=\!]{0,2}|\s+(NOT\s+)?(IN|LIKE\s+|BETWEEN\s+))$/i';
+        $preg = '/^(OR\s+|AND\s+)?([\|\:\w.]+)\s*([\<\>\=\!]{0,2}|\s+(NOT\s+)?(IN|LIKE|BETWEEN))$/i';
         if (preg_match($preg, $key, $match)) {
             $logic = empty($match[1]) ? '' : $match[1];
             $keys = $match[2];
-            $operator = $match[3] ?? '=';
-            if (1 < count($keys = explode('|', $match[2]))) {
+            $operator = empty($match[3]) ? '=' : trim($match[3]);
+            if (str_contains($keys, '|') && $keys = explode('|', $keys)) {
                 ':' === $keys[0][0] && ($isSqlValue = true) && $keys[0] = substr($keys[0], 1);
-                $keys = $this->Wrap($keys);
             } else {
                 $keys = $match[2];
                 ':' === $keys[0] && ($isSqlValue = true) && $keys = substr($keys, 1);
@@ -1057,7 +1059,6 @@ abstract class db
             $keys = $this->WrapSql($key);
             ':' === $keys[0] && ($isSqlValue = true) && $keys = substr($keys, 1);
         }
-        
         return [$isSqlValue, $logic, $keys, $operator];
     }
 }
