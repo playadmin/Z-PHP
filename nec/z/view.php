@@ -11,7 +11,7 @@ view::setup();
 class view
 {
     const
-    ENCODE_PREFIX = '!z-php-encode.', ENCODE_END_CHAR = '.!',
+    ENCODE_PREFIX = '.z-php-encode::.', ENCODE_END_CHAR = '.::',
     OPTIONS = LIBXML_NSCLEAN + LIBXML_PARSEHUGE + LIBXML_NOBLANKS + LIBXML_NOERROR + LIBXML_HTML_NODEFDTD + LIBXML_ERR_FATAL + LIBXML_COMPACT + LIBXML_NOXMLDECL;
     private static \DOMDocument|null $DOM = null;
     private static array $TAG = [], $TPLDOM = [], $PARAMS = [], $REPLACE = [], $CACHE = [];
@@ -123,8 +123,11 @@ class view
             if ($params = $v->getAttribute('params')) {
                 $params = explode(',', $params);
                 foreach($params as $v) {
-                    $p = explode(':', $v);
-                    $d[$p[0]] = $p[1] ?? true;
+                    // $p = explode(':', $v);
+                    // $d[$p[0]] = $p[1] ?? true;
+
+                    // 为方便阅读, 需在被调用的模板中声明需要传入的参数名
+                    $d[trim($v)] = true;
                 }
                 self::$TPLDOM[$file][$name][1] = $d;
             } else {
@@ -180,6 +183,7 @@ class view
                 $v = $attr->value ?: $n;
                 $key = '$' . $n;
                 if (!isset($item[1][$key]) && !isset($item[1][$n])) {
+                    // 为方便阅读, 需在被调用的模板中声明传入的参数名
                     throw new Exception("received param {$attr->name} was not specified: {$item[2]}[name={$item[3]}]; from {$file}");
                 }
                 $sets[] = "{$key} = {$v} ?? null";

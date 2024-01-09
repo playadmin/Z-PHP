@@ -212,7 +212,7 @@ class cache
     public static function PutFileCache (string $file, $data, int $flag = 2, int $timeStamp = 0): int|false
     {
         file_exists($dir = dirname($file)) || MakeDir($dir, 0755, true);
-        $prefix = 0 > $timeStamp ? '' :  pack('N', $timeStamp);
+        $prefix = 0 >= $timeStamp ? '' :  pack('N', $timeStamp);
         $str = match ($flag) {
             self::CODE_JSON => $prefix . json_encode($data, JSON_ENCODE_CFG),
             self::CODE_SERI => $prefix . serialize($data),
