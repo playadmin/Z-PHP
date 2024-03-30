@@ -49,7 +49,7 @@ class debug
         2 > $level && !$log && \z::_500();
         $line = $e->getLine();
         $file = $e->getFile();
-        $msg = TransCode($e->getMessage()) . " at [{$file} : {$line}]";
+        $msg = $e->getMessage() . " at [{$file} : {$line}]";
         $trace = $e->getTraceAsString();
         $trace = str_replace('\\\\', '\\', $trace);
 
@@ -74,7 +74,7 @@ class debug
                 }
                 \z::json($err);
             } else {
-                $err = "<style>body{margin:0;padding:0;}</style><div style='background:#FFBBDD;padding:1rem;'><h2>ERROR!</h2><h3>{$msg}</h3>";
+                $err = "<meta charset='utf-8'><style>body{margin:0;padding:0;}</style><div style='background:#FFBBDD;padding:1rem;'><h2>ERROR!</h2><h3>{$msg}</h3>";
                 $err .= '<strong><pre>' . $trace . '</pre></strong>';
                 if (isset($args)) {
                     $err .= '<h3>参数：</h3>';
@@ -107,7 +107,6 @@ class debug
             return;
         }
 
-        $errstr = TransCode($errstr);
         $errfile = '[' . str_replace('\\', '/', $errfile) . " ] : {$errline}";
         $log > 1 && self::log("{$errstr} {$errfile}", 'warning');
         if ($level > 2) {

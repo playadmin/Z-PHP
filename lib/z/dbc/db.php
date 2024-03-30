@@ -106,6 +106,9 @@ abstract class db
     }
     function WrapSql($sql)
     {
+        if (isset(self::SQL_KEYWORDS[strtoupper($sql)])) {
+            return "{$this->DB_WRAP_L}{$sql}{$this->DB_WRAP_R}";
+        }
         return preg_replace_callback($this->DB_PREG_WRAP_SQL, function ($m) {
             if ($m[1]) {
                 return $m[1];

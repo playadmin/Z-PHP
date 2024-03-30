@@ -225,11 +225,7 @@ function FileSizeFormat(int $size = 0, int $dec = 2): string
     }
     return round($size, $dec) . $unit[$pos];
 }
-function TransCode(string $str): string
-{
-    $encode = mb_detect_encoding($str, ['UTF-8', 'GB2312', 'GBK', 'BIG5', 'EUC-CN']);
-    return !$encode || 'UTF-8' === $encode ? $str : mb_convert_encoding($str, 'UTF-8', $encode);
-}
+
 function MakeDir(string $dir, int $mode = 0755, bool $recursive = true): bool
 {
     if (!file_exists($dir) && !mkdir($dir, $mode, $recursive)) {
