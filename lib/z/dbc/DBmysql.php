@@ -64,8 +64,9 @@ class DBmysql extends db
         return $this->PRIKEYS[$table];
     }
 
-    protected function DB_lockRows (string $sql): string
+    protected function DB_lockRows (string $sql, int|bool $lockExpire = null): string
     {
+        $lockExpire && $this->PDO->Query("set @@innodb_lock_wait_timeout = {$lockExpire}");
         return "{$sql} FOR UPDATE";
     }
 
