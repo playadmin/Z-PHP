@@ -63,7 +63,7 @@ class DBsqlite extends db
         return $this->PRIKEYS[$table];
     }
 
-    protected function DB_lockRows (string $sql): string|null
+    protected function DB_lockRows (string $sql, int|bool $lockExpire = null): string|null
     {
         return null;
     }

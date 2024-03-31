@@ -48,21 +48,22 @@ class pdo {
                 } elseif (empty($c['drive'])) {
                     $c['drive'] = strstr($c['dsn'], ':', true);
                 }
-                $key = md5($c['dsn'] . '|' . ($c['user'] ?? ''));
+                $key = empty($c['key']) ? md5($c['dsn'] . '|' . ($c['user'] ?? '')) : $c['key'];
                 $c['__key'] = $key;
                 $keys[] = $key;
                 empty($c['dbname']) && $c['dbname'] = 'mydb';
                 empty($c['cache_mod']) && $c['cache_mod'] = 'file';
                 empty($c['cache_dir']) && $c['cache_dir'] = 'db';
             }
-            $s = md5(implode(',', $keys));
+            $s = implode(',', $keys);
+            strlen($s) > 32 && $s = md5($s);
         } else {
             if (empty($cfg['dsn'])) {
                 $cfg['dsn'] = self::dsn($cfg);
             } elseif (empty($cfg['drive'])) {
                 $cfg['drive'] = strstr($cfg['dsn'], ':', true);
             }
-            $key = md5($cfg['dsn'] . '|' . ($cfg['user'] ?? ''));
+            $key = empty($cfg['key']) ? md5($cfg['dsn'] . '|' . ($cfg['user'] ?? '')) : $cfg['key'];
             $s = $cfg['__key'] = $key;
             empty($cfg['dbname']) && $cfg['dbname'] = 'mydb';
             empty($cfg['cache_mod']) && $cfg['cache_mod'] = 'file';

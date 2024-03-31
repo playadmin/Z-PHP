@@ -104,7 +104,7 @@ abstract class db
         }
         return $this->WrapSql($key);
     }
-    function WrapSql($sql)
+    function WrapSql(string $sql)
     {
         if (isset(self::SQL_KEYWORDS[strtoupper($sql)])) {
             return "{$this->DB_WRAP_L}{$sql}{$this->DB_WRAP_R}";
@@ -330,18 +330,18 @@ abstract class db
     }
     public function Parse ($reset = true): array
     {
-        $sql = $this->DB_sql(true);
+        $sql = $this->DB_sql();
         $field = $this->DB_field();
         $res[] = "SELECT {$field} FROM " . $sql;
         $res[] = $this->DB_BIND;
         $reset && $this->DB_done();
         return $res;
     }
-    public function SubQuery(string $field = '', bool $lock = false): string
+    public function SubQuery(string $field = '', int|bool $lock = false): string
     {
         $field && $this->DB_FIELD = $this->WrapSql($field);
         list($sql) = $this->Parse(false);
-        $lock && $sql = $this->DB_lockRows($sql);
+        $lock && $sql = $this->DB_lockRows($sql, $lock);
         $this->DB_WHERE = [];
         $this->DB_WHERED = '';
         $this->DB_TMP = '';
@@ -363,7 +363,7 @@ abstract class db
     abstract function Column (string $table, string $field): array | bool;
     abstract function PriKey (?string $table = null): array|string;
     abstract protected function DB_ApproximateRows (string $table): int; // 数据表总数据量的模糊值,非必要,无此功能的数据库可返回-1
-    abstract protected function DB_lockRows (string $sql): string|null; // 锁定数据行,无此功能的数据库可直接返回参数$sql(返回null则会抛出异常)
+    abstract protected function DB_lockRows (string $sql, int|bool $lockExpire = null): string|null; // 锁定数据行,无此功能的数据库可直接返回参数$sql(返回null则会抛出异常)
     abstract protected function DB_duplicate(array $insert, array $update = null): array|string|bool|int|null; // 有则更新，无则插入(返回null则会抛出异常)
     abstract protected function DB_dcount (string $from, string $sfield, string $field): int|false|null;// 去重统计(返回null则会抛出异常)
     abstract protected function DB_iinsert(string $table, array $data): stmt|false|null; // 插入数据, 已存在数据则不插入(返回null则会抛出异常)
@@ -393,7 +393,7 @@ abstract class db
         } else {
             $result = $this->PDO->Stmt("SELECT COUNT({$field}) FROM {$from}", $this->DB_BIND)->Row(\PDO::FETCH_COLUMN);
         }
-        $done && $this->DB_done();
+        $done ? $this->DB_done() : $this->DB_SQLD = '';
         return (int)$result;
     }
     public function Merge(string $sql, string|array $type = ''): static
@@ -415,7 +415,7 @@ abstract class db
         }
         return $this;
     }
-    public function Fetch(bool $lock = false): \PDOStatement
+    public function Fetch(int|bool $lock = false): \PDOStatement
     {
         if ($this->DB_PAGE) {
             $this->DB_page();
@@ -426,7 +426,7 @@ abstract class db
         }
         $field = $this->DB_field();
         $sql = "SELECT {$field} FROM " . $sql;
-        $lock && $sql = $this->DB_lockRows($sql);
+        $lock && $sql = $this->DB_lockRows($sql, $lock);
         if (null === $sql) {
             throw new Exception('Row lock is not supported');
         }
@@ -434,7 +434,7 @@ abstract class db
         $this->DB_done();
         return $stmt;
     }
-    public function Find(string | bool $field = false, bool $lock = false)
+    public function Find(string | bool $field = false, int|bool $lock = false)
     {
         if ($field) {
             $fetch = \PDO::FETCH_COLUMN;
@@ -446,7 +446,7 @@ abstract class db
         $field = $this->DB_field();
         $sql = "SELECT {$field} FROM {$sql}";
         if ($lock || !$this->Z_CACHE) {
-            $lock && $sql = $this->DB_lockRows($sql);
+            $lock && $sql = $this->DB_lockRows($sql, $lock);
             if (null === $sql) {
                 throw new Exception('Row lock is not supported');
             }
@@ -464,10 +464,10 @@ abstract class db
         $this->Z_CACHE = [];
         $result = $this->GetCache($mod, $this->DB_CONFIG['dbname'], $table, $key);
         if (null === $result) {
-            $res = $this->SetCache($mod, $this->DB_CONFIG['dbname'], $table, $key, function () use ($sql, $fetch) {
+            $res = $this->SetCache($table, $key, function () use ($sql, $fetch) {
                 $stmt = $this->PDO->Stmt($sql, $this->DB_BIND);
                 return $stmt->Row($fetch);
-            }, $expire);
+            }, $expire, $this->DB_CONFIG['dbname'], $mod);
             $result = $res[1];
         }
         return $result;
@@ -487,15 +487,15 @@ abstract class db
             $result = $this->GetCache($mod, $this->DB_CONFIG['dbname'], $table, $key);
             $paged = $this->GetCache($mod, $this->DB_CONFIG['dbname'], $table, $pkey);
             if (null === $result || !$paged) {
-                $res = $this->SetCache($mod, $this->DB_CONFIG['dbname'], $table, $key, function () use ($sql, $fetch, $mod, $table, $pkey, $expire) {
+                $res = $this->SetCache($table, $key, function () use ($sql, $fetch, $mod, $table, $pkey, $expire) {
                     $this->DB_page();
                     $sql .= $this->DB_sql(true);
                     $rows = $this->PDO->Stmt($sql, $this->DB_BIND)->Rows($fetch);
-                    $this->SetCache($mod, $this->DB_CONFIG['dbname'], $table, $pkey, $this->DB_PAGED, $expire);
+                    $this->SetCache($table, $pkey, $this->DB_PAGED, $expire, $mod, $this->DB_CONFIG['dbname']);
                     $rows && $this->DB_CHAIN && $this->QueryChain($rows, $this->DB_CHAIN);
                     $this->DB_done();
                     return $rows;
-                }, $expire);
+                }, $expire, $this->DB_CONFIG['dbname'], $mod);
                 $result = $res[1];
             } else {
                 $this->DB_PAGED = $paged;
@@ -503,18 +503,18 @@ abstract class db
         } else {
             $sql .= $this->DB_sql(true);
             list($table, $key) = $this->CacheKey('2', $fetch, $sql);
-            $result = $this->GetCache($mod, $this->DB_CONFIG['dbname'], $table, $key);
+            $result = $this->GetCache($table, $key, $this->DB_CONFIG['dbname'], $mod);
             if (null === $result) {
-                $res = $this->SetCache($mod, $this->DB_CONFIG['dbname'], $table, $key, function () use ($sql, $fetch) {
+                $res = $this->SetCache($table, $key, function () use ($sql, $fetch) {
                     $stmt = $this->PDO->Stmt($sql, $this->DB_BIND);
                     return $stmt->Rows($fetch);
-                }, $expire);
+                }, $expire, $this->DB_CONFIG['dbname'], $mod);
                 $result = $res[1];
             }
         }
         return $result;
     }
-    public function Select(string | bool $field = false, bool $lock = false): array
+    public function Select(string | bool $field = false, int|bool $lock = false): array
     {
         if ($field) {
             $fetch = \PDO::FETCH_COLUMN;
@@ -525,8 +525,8 @@ abstract class db
         if ($lock || !$this->Z_CACHE) {
             $field = $this->DB_field();
             $this->DB_PAGE && $this->DB_page();
-            $sql = "SELECT {$field} FROM " . $this->DB_sql(!!$this->DB_PAGE);
-            $lock && $sql = $this->DB_lockRows($sql);
+            $sql = "SELECT {$field} FROM " . $this->DB_sql();
+            $lock && $sql = $this->DB_lockRows($sql, $lock);
             if (null === $sql) {
                 throw new Exception('Row lock is not supported');
             }
@@ -966,14 +966,14 @@ abstract class db
         foreach ($where as $k => $value) {
             if (is_int($k)) {
                 // 键名不是字段的情况
-                if (!$sql) {
-                    $pre = strtoupper(substr($value, 0, 3));
-                    if ('AND' === $pre || 'OR ' === $pre) {
-                        $value = ltrim(substr($value, 3));
-                    }
+                $pre = strtoupper(trim(substr($value, 0, 3)));
+                if ('AND' === $pre || 'OR' === $pre) {
+                    $lc || $lc = "{$pre} ";
+                    return [$this->WrapSql($value), ''];
+                } else {
+                    $lc || $lc = 'AND ';
+                    return [$this->WrapSql($value), $lc];
                 }
-                $sql .= $this->WrapSql($value);
-                continue;
             }
 
             list($isSqlValue, $logic, $key, $operator) = $this->DB_checkKey($k);
@@ -987,7 +987,7 @@ abstract class db
                     '<>', '!=' => 'NOT IN',
                     default => $operator ?: 'IN',
                 };
-            } elseif ($isSqlValue && is_string($value) && preg_match('/^SELECT\s/i', $value)) {
+            } elseif (is_string($value) && 'SELECT' === strtoupper(substr($value, 0, 6))) {
                 // 包含子查询
                 $operator || $operator = 'IN';
                 $sql && $sql .= " {$logic}";
@@ -1047,20 +1047,21 @@ abstract class db
         $isSqlValue = false;
         $operator = '';
         $logic = '';
-        $preg = '/^(OR\s+|AND\s+)?([\|\:\w.]+)\s*([\<\>\=\!]{0,2}|\s+(NOT\s+)?(IN|LIKE|BETWEEN))$/i';
+        $preg = '/^(OR\s+|AND\s+)?([\|\:\w.]+)\s*([\<\>\=\!]{0,2}|\s+(NOT\s+)?(IN|LIKE\s+|BETWEEN\s+))$/i';
         if (preg_match($preg, $key, $match)) {
             $logic = empty($match[1]) ? '' : $match[1];
             $keys = $match[2];
-            $operator = empty($match[3]) ? '=' : trim($match[3]);
+            $operator = $match[3] ?? '=';
             if (str_contains($keys, '|') && $keys = explode('|', $keys)) {
                 ':' === $keys[0][0] && ($isSqlValue = true) && $keys[0] = substr($keys[0], 1);
             } else {
                 $keys = $match[2];
                 ':' === $keys[0] && ($isSqlValue = true) && $keys = substr($keys, 1);
             }
+            $keys = $this->Wrap($keys);
         } else {
+            ':' === $key[0] && ($isSqlValue = true) && $key = substr($key, 1);
             $keys = $this->WrapSql($key);
-            ':' === $keys[0] && ($isSqlValue = true) && $keys = substr($keys, 1);
         }
         return [$isSqlValue, $logic, $keys, $operator];
     }
