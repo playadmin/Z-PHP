@@ -6,7 +6,7 @@ function AppRun(string $entry, array $nec = null): void
     define('FTIME', microtime(true));
     define('TIME', (int)FTIME);
     define('STIME', (int)(1000 * FTIME));
-    define('ZPHP_VER', '5.0.1');
+    define('ZPHP_VER', '5.1.0');
     define('FILE_CORE', str_replace('\\', '/', __FILE__));
     $php = explode('/', trim($_SERVER['SCRIPT_NAME'], '/'));
     define('PHP_FILE', array_pop($php));
@@ -48,14 +48,14 @@ function AppRun(string $entry, array $nec = null): void
             z::AutoLoad($v);
         }
     }
-    z::CallHooks(z::BEFORE_ROUTER);
-    defined('DEBUGER') || define('DEBUGER', null);
-    defined('ROUTER') || define('ROUTER', null);
     z::CallHooks(z::BEFORE_CONFIG);
     z::LoadConfig();
+    z::CallHooks(z::BEFORE_ROUTER);
+    defined('ROUTER') || define('ROUTER', null);
+    defined('DEBUGER') || define('DEBUGER', null);
     ini_set('date.timezone', $GLOBALS['ZPHP_CONFIG']['TIME_ZONE'] ?? 'Asia/Shanghai');
     isset($GLOBALS['ZPHP_CONFIG']['DEBUG']['level']) || $GLOBALS['ZPHP_CONFIG']['DEBUG']['level'] = 3;
-    
+
     if (!defined('ROUTE')) {
         $router = [
             'mod'=>0,
@@ -172,7 +172,7 @@ function ExportArray (array $arr, bool $escape = false, string $indent = '', $pr
             } elseif (false === $v) {
                 $slice[] = 'false';
             } else {
-                ($forceStringValue || is_string($v)) && $v = "'" . str_replace($search, $replace, $v) . "'";
+                ($forceStringValue || is_string($v)) && $v = "'" . str_replace($search, $replace, (string)$v) . "'";
                 $slice[] = $v;
             }
         }
@@ -193,7 +193,7 @@ function ExportArray (array $arr, bool $escape = false, string $indent = '', $pr
             } elseif (false === $v) {
                 $slice[] = "{$key}false";
             } else {
-                ($forceStringValue || is_string($v)) && $v = "'" . str_replace($search, $replace, $v) . "'";
+                ($forceStringValue || is_string($v)) && $v = "'" . str_replace($search, $replace, (string)$v) . "'";
                 $slice[] = $key . $v;
             }
         }
@@ -352,7 +352,6 @@ class z
     {
         self::loadMapping();
         self::loadFunctions();
-        self::CallHooks(self::BEFORE_START);
         self::setSession();
         self::setInput();
         headers_sent() || header('Content-type: text/html; charset=utf-8');
@@ -360,6 +359,7 @@ class z
         $ctrl = isset(ROUTE['module']) ? 'app\\' . ROUTE['module'] . '\\ctrl\\' . ROUTE['ctrl'] : 'app\\ctrl\\' . ROUTE['ctrl'];
         $act = (string)ROUTE['act'];
 
+        self::CallHooks(self::BEFORE_START);
         if (!class_exists($ctrl)) {
             $GLOBALS['ZPHP_CONFIG']['DEBUG']['level'] < 2 && self::_404();
         }

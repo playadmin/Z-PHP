@@ -65,7 +65,7 @@ class cache
      * @param expire 获取锁的超时时间（秒）
      * @return 成功返回锁的键名，否则返回false
      */
-    public static function Rlock($redis, string $key, int $expire = 0): string|false
+    public static function Rlock(Redis $redis, string $key, int $expire = 0): string|false
     {
         $lock_key = self::LOCK_KEY_PREFIX . $key;
         if ($expire) {
@@ -114,7 +114,7 @@ class cache
      * @param lock 并发锁
      * @return 读取或写入的数据
      */
-    public static function R(string $key, $data = null, int $expire = null, int $lock = 0)
+    public static function R(string $key, $data = null, int $expire = null, bool $lock = false)
     {
         $redis = self::Redis();
         isset($expire) || $expire = $GLOBALS['ZPHP_CONFIG']['REDIS']['expire'] ?? 600;
@@ -212,7 +212,7 @@ class cache
     public static function PutFileCache (string $file, $data, int $flag = 2, int $timeStamp = 0): int|false
     {
         file_exists($dir = dirname($file)) || MakeDir($dir, 0755, true);
-        $prefix = 0 >= $timeStamp ? '' :  pack('N', $timeStamp);
+        $prefix = 0 > $timeStamp ? '' :  pack('N', $timeStamp);
         $str = match ($flag) {
             self::CODE_JSON => $prefix . json_encode($data, JSON_ENCODE_CFG),
             self::CODE_SERI => $prefix . serialize($data),

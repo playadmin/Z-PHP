@@ -66,8 +66,8 @@ class DBmysql extends db
 
     protected function DB_lockRows (string $sql, int|bool $lockExpire = null): string
     {
-        $lockExpire && $this->PDO->Query("set @@innodb_lock_wait_timeout = {$lockExpire}");
-        return "{$sql} FOR UPDATE";
+        is_int($lockExpire) && $lockExpire > 0 && $this->PDO->Query("set @@innodb_lock_wait_timeout = {$lockExpire}");
+        return $lockExpire ? "{$sql} FOR UPDATE" : $sql;
     }
 
     // 统计数据量（忽略重复）
