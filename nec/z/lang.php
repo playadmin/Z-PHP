@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 define('LANG_ROOT', P_ROOT . 'lang/');
+define('LANG_KEY_PREFIX', '/^(ERR_|WARN_|INFO_|MSG_)/');
 
 \z::Hook(\z::BEFORE_START, 'Lang', function () {
     $name = $GLOBALS['ZPHP_CONFIG']['LANG']['name'] ?? 'lang';
@@ -59,7 +60,7 @@ function GetLang (string $key, string $path = null, array $args = null): string
         $GLOBALS['ZPHP_LANG'][$path] = $map;
     }
     if (!$str = $map[$key] ?? '') {
-        return $key;
+        return preg_replace(LANG_KEY_PREFIX, '', $key);
     }
     if (!$args) {
         return $str;

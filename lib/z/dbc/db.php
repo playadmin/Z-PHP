@@ -9,7 +9,7 @@ abstract class db
 {
     use \lib\z\dbc\cache;
     const WRAP_L = '', WRAP_R = '';
-    const SQL_KEYWORDS = ['SELECT'=>true, 'INSERT'=>true, 'UPDATE'=>true, 'DELETE'=>true, 'SET'=>true, 'LIMIT'=>true, 'AND'=>true, 'IS'=>true, 'OR'=>true, 'ON'=>true, 'NOT'=>true, 'ALL'=>true, 'ASC'=>true, 'DESC'=>true, 'UNION'=>true, 'DISTINCT'=>true, 'BETWEEN'=>true, 'LEFT'=>true, 'RIGHT'=>true, 'INNER'=>true, 'OUTER'=>true, 'NATURAL'=>true, 'JOIN'=>true, 'AS'=>true, 'NULL'=>true, 'CASE'=>true, 'IF'=>true, 'WHEN'=>true, 'THEN'=>true, 'END'=>true, 'FROM'=>true, 'WHERE'=>true, 'GROUP'=>true, 'BY'=>true, 'HAVING'=>true, 'ORDER'=>true];
+    const SQL_KEYWORDS = ['SELECT'=>true, 'INSERT'=>true, 'UPDATE'=>true, 'DELETE'=>true, 'SET'=>true, 'LIMIT'=>true, 'LIKE', 'AND'=>true, 'IS'=>true, 'OR'=>true, 'ON'=>true, 'NOT'=>true, 'ALL'=>true, 'ASC'=>true, 'DESC'=>true, 'UNION'=>true, 'DISTINCT'=>true, 'BETWEEN'=>true, 'LEFT'=>true, 'RIGHT'=>true, 'INNER'=>true, 'OUTER'=>true, 'NATURAL'=>true, 'JOIN'=>true, 'AS'=>true, 'NULL'=>true, 'CASE'=>true, 'IF'=>true, 'WHEN'=>true, 'THEN'=>true, 'END'=>true, 'FROM'=>true, 'WHERE'=>true, 'GROUP'=>true, 'BY'=>true, 'HAVING'=>true, 'ORDER'=>true];
     protected static array $DB_INSTANCE = [];
     protected array $DB_CONFIG = [],
     $DB_BASE = [],
@@ -167,6 +167,9 @@ abstract class db
     {
         return $this->PDO->Writer()->inTransaction();
     }
+    public function GetTable (): string {
+        return $this->DB_TABLE;
+    }
     public function GetSql (): string {
         return $this->PDO->GetSql();
     }
@@ -266,7 +269,7 @@ abstract class db
 
     /**
      * 合并关联查询
-     * table: 要合并的表名，prikey：要合并的表主键名，raw_field：外键名，chain_field：要合并的表字段
+     * table: 要合并的表名(需要包含前缀)，prikey: 要合并的表主键名，raw_field: 外键名，chain_field: 要合并的表字段
      * $chain: [table=>[prikey, [raw_field=>[...chain_field]]]]
      * $chain: [目标表名=>[目标表主键名, [数据源(主表)外键名或主键名=>[目标表的字段]]]]
      * $sourceMap: [raw_field=>[new_field, map]]
@@ -296,7 +299,7 @@ abstract class db
                 }
                 array_push($bind, ...array_column($data, $raw));
             }
-            $tableName = "{$this->DB_WRAP_L}{$this->DB_PREFIX}{$table}{$this->DB_WRAP_R}";
+            $tableName = "{$this->DB_WRAP_L}{$table}{$this->DB_WRAP_R}";
             $bind = array_values(array_unique($bind));
             $where = "{$this->DB_WRAP_L}{$set[0]}{$this->DB_WRAP_R} IN(" . str_repeat('?,', count($bind) - 1) . '?)';
             $queryFields = "{$this->DB_WRAP_L}{$set[0]}{$implode}" . implode($implode, array_keys($map)) . $this->DB_WRAP_R;
@@ -328,46 +331,28 @@ abstract class db
             }
         }
     }
-    public function Parse ($reset = true): array
-    {
-        $sql = $this->DB_sql();
-        $field = $this->DB_field();
-        $res[] = "SELECT {$field} FROM " . $sql;
-        $res[] = $this->DB_BIND;
-        $reset && $this->DB_done();
-        return $res;
-    }
-    public function SubQuery(string $field = '', int|bool $lock = false): string
-    {
-        $field && $this->DB_FIELD = $this->WrapSql($field);
-        list($sql) = $this->Parse(false);
-        $lock && $sql = $this->DB_lockRows($sql, $lock);
-        $this->DB_WHERE = [];
-        $this->DB_WHERED = '';
-        $this->DB_TMP = '';
-        $this->DB_FIELD = '*';
-        $this->DB_PAGE = [];
-        $this->DB_JOIN = [];
-        $this->DB_JOIND = '';
-        $this->DB_JOINMAP = [];
-        $this->DB_GROUP = '';
-        $this->DB_ORDER = '';
-        $this->DB_LIMIT = '';
-        $this->DB_HAVING = [];
-        $this->DB_SQLD = '';
-        $this->DB_MERGE = '';
-        return $sql;
-    }
 
     abstract function Columns (string $table): array | false;
     abstract function Column (string $table, string $field): array | bool;
     abstract function PriKey (?string $table = null): array|string;
     abstract protected function DB_ApproximateRows (string $table): int; // 数据表总数据量的模糊值,非必要,无此功能的数据库可返回-1
-    abstract protected function DB_lockRows (string $sql, int|bool $lockExpire = null): string|null; // 锁定数据行,无此功能的数据库可直接返回参数$sql(返回null则会抛出异常)
+    abstract protected function DB_lockRows (string $sql, ?int $lockExpire = null): string|null; // 锁定数据行,无此功能的数据库可直接返回参数$sql(返回null则会抛出异常)
     abstract protected function DB_duplicate(array $insert, array $update = null): array|string|bool|int|null; // 有则更新，无则插入(返回null则会抛出异常)
     abstract protected function DB_dcount (string $from, string $sfield, string $field): int|false|null;// 去重统计(返回null则会抛出异常)
     abstract protected function DB_iinsert(string $table, array $data): stmt|false|null; // 插入数据, 已存在数据则不插入(返回null则会抛出异常)
     abstract protected function DB_ibatchInsert(array &$data): string|null; // 批量插入数据, 已存在数据则不插入(返回null则会抛出异常)
+
+    public function SubQuery(string $field = '', int|bool $lock = false): array
+    {
+        $field && $this->DB_FIELD = $this->WrapSql($field);
+        $sql = $this->DB_sql();
+        $field = $this->DB_field();
+        $sql = "SELECT {$field} FROM " . $sql;
+        $lock && $sql = $this->DB_lockRows($sql, $lock);
+        $res = [$sql, $this->DB_BIND];
+        $this->DB_done();
+        return $res;
+    }
 
     public function GetPage(): array
     {
@@ -983,16 +968,21 @@ abstract class db
                 if (!$value) {
                     continue;
                 }
+                if (is_string($value[0]) && 'SELECT' === strtoupper(substr($value[0], 0, 6))) {
+                    // 包含子查询
+                    $operator || $operator = 'IN';
+                    $sql && $sql .= " {$logic}";
+                    $sql .= "{$key} {$operator} ({$value[0]})";
+                    if (!empty($value[1]) && is_array($value[1])) {
+                        // 绑定子查询参数
+                        array_push($this->DB_BIND, ...$value[1]);
+                    }
+                    continue;
+                }
                 $operator = match ($operator) {
                     '<>', '!=' => 'NOT IN',
                     default => $operator ?: 'IN',
                 };
-            } elseif (is_string($value) && 'SELECT' === strtoupper(substr($value, 0, 6))) {
-                // 包含子查询
-                $operator || $operator = 'IN';
-                $sql && $sql .= " {$logic}";
-                $sql .= "{$key} {$operator} ({$value})";
-                continue;
             }
 
             if (is_array($key)) {
@@ -1047,21 +1037,21 @@ abstract class db
         $isSqlValue = false;
         $operator = '';
         $logic = '';
-        $preg = '/^(OR\s+|AND\s+)?([\|\:\w.]+)\s*([\<\>\=\!]{0,2}|\s+(NOT\s+)?(IN|LIKE\s+|BETWEEN\s+))$/i';
+        $preg = '/^(OR\s+|AND\s+)?([\|\:\w.]+)\s*([\<\>\=\!]{0,2}|\s+(IN|NOT\s+IN|LIKE|NOT\s+LIKE|BETWEEN|NOT\s+BETWEEN))$/i';
         if (preg_match($preg, $key, $match)) {
             $logic = empty($match[1]) ? '' : $match[1];
             $keys = $match[2];
             $operator = $match[3] ?? '=';
-            if (str_contains($keys, '|') && $keys = explode('|', $keys)) {
+            $count = count($keys = explode('|', $match[2]));
+            if (1 < $count) {
                 ':' === $keys[0][0] && ($isSqlValue = true) && $keys[0] = substr($keys[0], 1);
             } else {
                 $keys = $match[2];
                 ':' === $keys[0] && ($isSqlValue = true) && $keys = substr($keys, 1);
             }
-            $keys = $this->Wrap($keys);
         } else {
-            ':' === $key[0] && ($isSqlValue = true) && $key = substr($key, 1);
             $keys = $this->WrapSql($key);
+            ':' === $keys[0] && ($isSqlValue = true) && $keys = substr($keys, 1);
         }
         return [$isSqlValue, $logic, $keys, $operator];
     }
