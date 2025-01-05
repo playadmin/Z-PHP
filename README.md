@@ -2,7 +2,7 @@
 ## 需要PHP版本：>= 8.0
 ## 网站：<a href="http://www.z-php.com/" target="_blank">http://www.z-php.com</a>
 ## github：<a href="https://github.com/playadmin/Z-PHP" target="_blank">https://github.com/playadmin/Z-PHP</a>
-## 5.x文档 :<a href="https://www.showdoc.cc/zphp4" target="_blank"> https://www.showdoc.cc/zphp5</a>
+## 5.x文档 :<a href="https://www.showdoc.cc/zphp5" target="_blank"> https://www.showdoc.cc/zphp5</a>
 ## 4.x文档 :<a href="https://www.showdoc.cc/zphp4" target="_blank"> https://www.showdoc.cc/zphp4</a>
 ## QQ群：592429541
 ### 觉得还不错的别忘给颗星星
