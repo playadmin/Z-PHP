@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 /**
+ * $conf['previewPath'] = P_PUBLIC . 'uploads/preview'; // 预览图保存路径
+ * $conf['previewWidth'] = 300; // 预览图宽度
+ * $conf['previewQuality'] = 80; // 预览图质量(0-100)
  * $conf['path'] = P_PUBLIC . 'uploads/img';
  * $conf['allowType'] = array('jpg','gif','png');
  * $conf['maxSize'] = 1024*1024;
@@ -31,6 +34,9 @@ class upload
         'sufName' => '', //文件名后缀
         'maxSize' => 2097152, //允许的文件大小
         'randName' => true, //是否随机命名
+        'previewPath' => '', //预览图保存路径
+        'previewWidth' => 300, //预览图宽度
+        'previewQuality' => 80, //预览图质量(0-100)
     ];
 
     private array $allowType = ['.jpg', '.gif', '.png', '.rar', '.zip', '.7z', '.mp3', '.mp4', '.flv', '.sql', '.txt', '.xls', '.xlsx', '.doc', '.docx', '.pdf'], //允许的文件后缀
@@ -206,17 +212,113 @@ class upload
 
     /**
      * 保存文件
-     * @param  [type] $i [description]
-     * @return [type]    [description]
+     * @param int $i 文件索引
+     * @return bool 是否成功
      */
     private function moveFile(int $i): bool
     {
         $mov = move_uploaded_file($this->filesInfo['tmp_name'][$i], iconv("UTF-8", "GBK", $this->mapping[$i]['path']));
         if ($mov) {
+            // 如果是图片且配置了预览路径，则生成预览图
+            if (in_array($this->filesInfo['ext'][$i], ['.jpg', '.jpeg', '.png', '.gif'])) {
+                $this->createPreviewImage($this->mapping[$i]['path'], $i);
+            }
             return true;
         } else {
             $this->error[] = "文件[{$this->filesInfo['name'][$i]}]保存失败";
             unset($this->mapping[$i]);
+            return false;
+        }
+    }
+
+    /**
+     * 创建预览图片
+     * @param string $sourcePath 原始图片路径
+     * @param int $i 文件索引
+     * @return bool 是否成功
+     */
+    private function createPreviewImage(string $sourcePath, int $i): bool
+    {
+        // 如果没有设置预览路径，则使用原路径下的preview目录
+        $previewPath = $this->conf['previewPath'] ?: $this->savePath . '/preview';
+        
+        // 创建预览目录
+        if (!is_dir($previewPath) && !mkdir($previewPath, 0755, true)) {
+            $this->error[] = "无法创建预览目录[{$previewPath}]";
+            return false;
+        }
+
+        // 预览图文件名
+        $previewFile = $previewPath . '/' . $this->mapping[$i]['name'];
+        
+        // 根据不同类型处理图片
+        switch ($this->filesInfo['ext'][$i]) {
+            case '.jpg':
+            case '.jpeg':
+                $source = imagecreatefromjpeg($sourcePath);
+                break;
+            case '.png':
+                $source = imagecreatefrompng($sourcePath);
+                break;
+            case '.gif':
+                $source = imagecreatefromgif($sourcePath);
+                break;
+            default:
+                return false;
+        }
+
+        if (!$source) {
+            $this->error[] = "无法读取图片文件[{$sourcePath}]";
+            return false;
+        }
+
+        // 获取原始图片尺寸
+        $width = imagesx($source);
+        $height = imagesy($source);
+        
+        // 计算新高度，保持宽高比
+        $newWidth = $this->conf['previewWidth'];
+        $newHeight = (int)($height * ($newWidth / $width));
+        
+        // 创建新图像
+        $preview = imagecreatetruecolor($newWidth, $newHeight);
+        
+        // 处理PNG和GIF的透明背景
+        if ($this->filesInfo['ext'][$i] == '.png' || $this->filesInfo['ext'][$i] == '.gif') {
+            imagealphablending($preview, false);
+            imagesavealpha($preview, true);
+            $transparent = imagecolorallocatealpha($preview, 255, 255, 255, 127);
+            imagefilledrectangle($preview, 0, 0, $newWidth, $newHeight, $transparent);
+        }
+        
+        // 调整图片大小
+        imagecopyresampled($preview, $source, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+        
+        // 保存预览图
+        $result = false;
+        switch ($this->filesInfo['ext'][$i]) {
+            case '.jpg':
+            case '.jpeg':
+                $result = imagejpeg($preview, $previewFile, $this->conf['previewQuality']);
+                break;
+            case '.png':
+                $result = imagepng($preview, $previewFile, (int)(9 * (100 - $this->conf['previewQuality']) / 100));
+                break;
+            case '.gif':
+                $result = imagegif($preview, $previewFile);
+                break;
+        }
+        
+        // 释放内存
+        imagedestroy($source);
+        imagedestroy($preview);
+        
+        if ($result) {
+            // 保存预览图信息
+            $this->mapping[$i]['preview'] = $previewFile;
+            return true;
+        } else {
+            $this->error[] = "无法保存预览图[{$previewFile}]";
             return false;
         }
     }
