@@ -183,7 +183,7 @@ class counter {
      * 按$step累加, 超过$max时则从0开始
      * $call 为获取初始值的回调函数, 当生成器初始化(值为0)时调用
      */
-    static function Generate (string $key, int $num = 1, int $step = 1, callable $call = null, int $max = PHP_INT_MAX): int|array
+    static function Generate (string $key, int $num = 1, int $step = 1, ?callable $call = null, int $max = PHP_INT_MAX): int|array
     {
         $id = 0;
         if ($max > PHP_INT_MAX) {

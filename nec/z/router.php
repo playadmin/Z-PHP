@@ -58,6 +58,7 @@ class router
             $route['app'] = APP_NAME;
             $route['mod'] = self::$MOD;
             define('ROUTE', $route);
+            define('APP_HOME', U_HOME . ($router['PATH'] ?? PHP_FILE));
         });
     }
 
@@ -238,7 +239,7 @@ class router
         }
         return $url;
     }
-    public static function U0(string $path, array $args = null): string
+    public static function U0(string $path, ?array $args = null): string
     {
         $Q = self::getUf($path);
         $url = self::getInPath($Q);
@@ -265,7 +266,7 @@ class router
         return $url;
     }
 
-    public static function U1(string $path, array $args = null): string
+    public static function U1(string $path, ?array $args = null): string
     {
         $info = self::getUf($path);
         $url = self::getInPath($info, !empty($args['params']));
@@ -288,7 +289,7 @@ class router
         return $url;
     }
 
-    public static function U2(string $path, array $args = null): string
+    public static function U2(string $path, ?array $args = null): string
     {
         $info = self::getUf($path);
         $app = $info['app'][1] ?? APP_NAME;
@@ -341,7 +342,7 @@ class router
         return $url;
     }
 
-    public static function Url(string $path, array $args = null, $mod = -1): string
+    public static function Url(string $path, ?array $args = null, $mod = -1): string
     {
         0 > $mod && $mod = $GLOBALS['ZPHP_CONFIG']['ROUTER']['mod'] ?? self::$MOD;
 

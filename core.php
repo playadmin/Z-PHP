@@ -1,20 +1,22 @@
 <?php
 declare(strict_types=1);
 
-function AppRun(string $entry, array $nec = null): void
+function AppRun(string $entry, ?array $nec = null): void
 {
     define('FTIME', microtime(true));
     define('TIME', (int)FTIME);
     define('STIME', (int)(1000 * FTIME));
-    define('ZPHP_VER', '5.1.0');
-    define('FILE_CORE', str_replace('\\', '/', __FILE__));
+    define('ZPHP_VER', '5.0.2');
+    define('FILE_CORE', __FILE__);
+
     $php = explode('/', trim($_SERVER['SCRIPT_NAME'], '/'));
     define('PHP_FILE', array_pop($php));
     define('U_ROOT', $php ? '/' . implode('/', $php) : '');
     define('U_HOME', U_ROOT . '/');
     define('METHOD', $_SERVER['REQUEST_METHOD']);
-    define('P_IN', str_replace('\\', '/', $entry) . '/');
-    define('P_ROOT', str_replace('\\', '/', __DIR__) . '/');
+    define('IS_POST', 'POST' === METHOD);
+    define('P_IN', $entry . '/');
+    define('P_ROOT', __DIR__ . '/');
     define('P_APP', P_ROOT . 'app/' . APP_NAME . '/');
     define('P_TMP', P_ROOT . 'tmp/');
     define('P_CACHE', P_TMP . 'cache/');
@@ -56,22 +58,29 @@ function AppRun(string $entry, array $nec = null): void
     ini_set('date.timezone', $GLOBALS['ZPHP_CONFIG']['TIME_ZONE'] ?? 'Asia/Shanghai');
     isset($GLOBALS['ZPHP_CONFIG']['DEBUG']['level']) || $GLOBALS['ZPHP_CONFIG']['DEBUG']['level'] = 3;
 
-    if (!defined('ROUTE')) {
-        $router = [
-            'mod'=>0,
-            'ctrl' => empty($_GET['c']) ? 'index' : $_GET['c'],
-            'act' => empty($_GET['a']) ? 'index' : $_GET['a'],
-            'uri' => $_SERVER['REQUEST_URI'],
-            'query'=> $_GET,
-        ];
-        empty($GLOBALS['ZPHP_CONFIG']['ROUTER']['module']) || $router['module'] = empty($_GET['m']) ? 'index' : $_GET['m'];
-        define('ROUTE', $router);
+    if (!isset($GLOBALS['ZPHP_CONFIG']['ROUTER']['mod']) || $GLOBALS['ZPHP_CONFIG']['ROUTER']['mod'] < 0) {
+        defined('ROUTE') || define('ROUTE', null);
+    } else {
+        if (!defined('ROUTE')) {
+            $router = [
+                'mod'=>0,
+                'ctrl' => empty($_GET['c']) ? 'index' : $_GET['c'],
+                'act' => empty($_GET['a']) ? 'index' : $_GET['a'],
+                'uri' => $_SERVER['REQUEST_URI'],
+                'query'=> $_GET,
+            ];
+            empty($GLOBALS['ZPHP_CONFIG']['ROUTER']['module']) || $router['module'] = empty($_GET['m']) ? 'index' : $_GET['m'];
+            define('ROUTE', $router);
+        }
+        if (isset(ROUTE['module'])) {
+            define('P_MODULE', P_APP . ROUTE['module'] . '/');
+            define('P_RES_MODULE', P_RES_APP . ROUTE['module'] . '/');
+            define('U_RES_MODULE', U_RES_APP . '/' . ROUTE['module']);
+        }
     }
-    if (isset(ROUTE['module'])) {
-        define('P_MODULE', P_APP . ROUTE['module'] . '/');
-        define('P_RES_MODULE', P_RES_APP . ROUTE['module'] . '/');
-        define('U_RES_MODULE', U_RES_APP . '/' . ROUTE['module']);
-    }
+
+    defined('APP_HOME') || define('APP_HOME', U_HOME . PHP_FILE);
+
     if ($GLOBALS['ZPHP_CONFIG']['DEBUG']['level'] > 1) {
         error_reporting(E_ALL);
     } else {
@@ -347,6 +356,7 @@ class z
     const BEFORE_CTRL_ACTION = -80;
     const BEFORE_EXIT = -70;
 
+    private static $CTRL = '';
     private static array $HOOKS = [];
     public static function start(): void
     {
@@ -356,13 +366,21 @@ class z
         self::setInput();
         headers_sent() || header('Content-type: text/html; charset=utf-8');
         header('X-Powered-By: ' . ($GLOBALS['ZPHP_CONFIG']['POWEREDBY'] ?? 'ZPHP-MIN'));
-        $ctrl = isset(ROUTE['module']) ? 'app\\' . ROUTE['module'] . '\\ctrl\\' . ROUTE['ctrl'] : 'app\\ctrl\\' . ROUTE['ctrl'];
-        $act = (string)ROUTE['act'];
+
+        if (!ROUTE) {
+            $ctrl = 'app\\index';
+            $act = 'index';
+        } else {
+            $ctrl = isset(ROUTE['module']) ? 'app\\' . ROUTE['module'] . '\\ctrl\\' . ROUTE['ctrl'] : 'app\\ctrl\\' . ROUTE['ctrl'];
+            $act = (string)ROUTE['act'];
+        }
 
         self::CallHooks(self::BEFORE_START);
         if (!class_exists($ctrl)) {
             $GLOBALS['ZPHP_CONFIG']['DEBUG']['level'] < 2 && self::_404();
         }
+        self::$CTRL = $ctrl;
+
         self::CallHooks(self::BEFORE_CTRL_INIT);
         method_exists($ctrl, 'init') && $ctrl::init();
         self::CallHooks(self::BEFORE_CTRL_ACTION);
@@ -398,13 +416,21 @@ class z
     }
     public static function _404(): void
     {
-        header('Status: 404');
-        die('<h1 style="text-align:center;padding:1rem 0;">404</h1>');
+        if (self::$CTRL && method_exists(self::$CTRL, '_404')) {
+            self::$CTRL::_404();
+        } else {
+            header('Status: 404');
+            die('<h1 style="text-align:center;padding:1rem 0;">404</h1>');
+        }
     }
     public static function _500(): void
     {
-        header('Status: 500');
-        die('<h1 style="text-align:center;padding:1rem 0;">500</h1>');
+        if (self::$CTRL && method_exists(self::$CTRL, '_500')) {
+            self::$CTRL::_500();
+        } else {
+            header('Status: 500');
+            die('<h1 style="text-align:center;padding:1rem 0;">500</h1>');
+        }
     }
     private static function setSession(): void
     {

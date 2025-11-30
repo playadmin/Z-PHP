@@ -9,6 +9,8 @@ class debug
     const ERRTYPE = [2 => '运行警告', 8 => '运行提醒', 256 => '错误', 512 => '警告', 1024 => '提醒', 2048 => '编码标准化警告', 1100 => '文件', 1110 => 'SQL错误', 1120 => 'SQL查询', 1130 => '环境', 1131 => '常量', 1132 => '配置', 1133 => '命名空间', 1140 => '模板文件', 1150 => '模板变量', 1160 => 'POST', 8192 => '运行通知'];
     private static float $pdotime = 0;
     private static array $errs = [];
+    private static string $error_db_sql = '';
+    private static array $error_db_bind = [];
 
     public static function setup(): void {
         define('DEBUGER', __CLASS__);
@@ -17,11 +19,16 @@ class debug
     {
         self::$pdotime += $time;
     }
-    private static function debugShowLevel (): int
+    public static function dberror(string $sql, ?array $bind = null): void
     {
-        $level = $GLOBALS['ZPHP_CONFIG']['DEBUG']['level'] ?? 3;
-        if (!$level || !$ipset = $GLOBALS['ZPHP_CONFIG']['DEBUG']['ip'] ?? null) {
-            return $level;
+        self::$error_db_sql = $sql;
+        $bind && self::$error_db_bind = $bind;
+    }
+    private static function debugShowLevel (?int $level = null): int
+    {
+        $level === null && $level = $GLOBALS['ZPHP_CONFIG']['DEBUG']['level'] ?? 3;
+        if ($level < 1 || !$ipset = $GLOBALS['ZPHP_CONFIG']['DEBUG']['ip'] ?? null) {
+            return $level < 0 ? 0 : $level;
         }
         $ip = GetIp();
         if (is_string($ipset)) {
@@ -35,12 +42,12 @@ class debug
                 if ('/' === $v[0] && '/' === $v[strlen($v) - 1]) {
                     return preg_match($v, $ip) ? $level : 0;
                 }
-                if ($ipset === $ip) {
+                if ($v === $ip) {
                     return $level;
                 }
             }
-            return 0;
         }
+        return 0;
     }
     public static function exceptionHandler(\Error|\Exception $e): void
     {
@@ -49,9 +56,14 @@ class debug
         2 > $level && !$log && \z::_500();
         $line = $e->getLine();
         $file = $e->getFile();
+        // $msg = TransCode($e->getMessage()) . " at [{$file} : {$line}]";
         $msg = $e->getMessage() . " at [{$file} : {$line}]";
         $trace = $e->getTraceAsString();
         $trace = str_replace('\\\\', '\\', $trace);
+
+        if (self::$error_db_sql) {
+            $trace = 'Last sql: ' . self::$error_db_sql . PHP_EOL . 'Last bind: ' . P(self::$error_db_bind, false) . PHP_EOL . $trace;
+        }
 
         foreach ($e->getTrace() as $k => $v) {
             isset($v['args']) && $args["#{$k}"] = 1 === count($v['args']) ? $v['args'][0] : $v['args'];
@@ -74,7 +86,7 @@ class debug
                 }
                 \z::json($err);
             } else {
-                $err = "<meta charset='utf-8'><style>body{margin:0;padding:0;}</style><div style='background:#FFBBDD;padding:1rem;'><h2>ERROR!</h2><h3>{$msg}</h3>";
+                $err = "<style>body{margin:0;padding:0;}</style><div style='background:#FFBBDD;padding:1rem;'><h2>ERROR!</h2><h3>{$msg}</h3>";
                 $err .= '<strong><pre>' . $trace . '</pre></strong>';
                 if (isset($args)) {
                     $err .= '<h3>参数：</h3>';
@@ -107,6 +119,7 @@ class debug
             return;
         }
 
+        // $errstr = TransCode($errstr);
         $errfile = '[' . str_replace('\\', '/', $errfile) . " ] : {$errline}";
         $log > 1 && self::log("{$errstr} {$errfile}", 'warning');
         if ($level > 2) {
@@ -114,9 +127,12 @@ class debug
             self::$errs[$errno][] = "{$errstr} {$errfile}";
         }
     }
-    public static function GetDebug(int $level = -1): array|null
+    public static function GetDebug(): array|null
     {
-        -1 === $level && $level = $GLOBALS['ZPHP_CONFIG']['DEBUG']['level'] ?? 0;
+        if (!$level = self::debugShowLevel()) {
+            return null;
+        }
+        // -1 === $level && $level = $GLOBALS['ZPHP_CONFIG']['DEBUG']['level'] ?? 0;
         if ($level) {
             $json['运行'] = [
                 'SQL查询' => round(1000 * self::$pdotime, 3) . 'ms',
