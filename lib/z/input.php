@@ -65,15 +65,16 @@ class input {
     PHONE = 202, // 手机号
     INTE_PHONE = 203, // 带区号的手机号
     EMAIL = 204, // 电子邮件
-    URL = 205, // URL地址
-    AB_URL = 206, // URL地址(绝对)
-    LOCAL_URL = 207, // URL地址(相对)
-    IP = 208, // IP地址(IPv4和IPv6)
-    IPV4 = 209, // IPv4地址
-    IPV6 = 210,  // IPv6地址
-    TIME = 211, // 时间 H:i:s
+    URI = 300, // URI地址(URL或本地地址)
+    URL = 301, // URL地址
+    AB_URL = 302, // URL地址(绝对)
+    LOCAL_URL = 303, // URL地址(相对)
+    IP = 310, // IP地址(IPv4和IPv6)
+    IPV4 = 311, // IPv4地址
+    IPV6 = 312,  // IPv6地址
+    TIME = 313, // 时间 H:i:s
 
-    JSON = 301;
+    JSON = 320;
 
     const ENCODES = ['<'=>'&lt;', '>'=>'&gt;', '&'=>'&amp;', '"'=>'&quot;', '\''=>'&apos;'];
     const PREG_LETTER = 'A-Za-z';
@@ -90,8 +91,9 @@ class input {
     const PREG_MB4 = '\x{10000}-\x{10FFFF}';
     const PREG_VAR = '[A-Za-z_][0-9A-Za-z_]*';
     const PREG_EMAIL = '[\w-]+@(\w+\.)+\w+';
-    const PREG_URL = '(\w+\:\/)?\/.+';
-    const PREG_ABURL = '(\w+:)?\/\/.+';
+    const PREG_URI = '(\w+\:\/|\/)?\/.+';
+    const PREG_URL = '(\w+\:\/|\/)\/.+';
+    const PREG_ABURL = '\w+:\/\/.+';
     const PREG_LOCAL_URL = '\/.+';
     const PREG_TEL = '(\+?\d{2,4}[-\s]?)?(\d{2,4}[-\s]?){0,2}\d{4,9}';
     const PREG_PHONE = '1[3-9]\d{9}';
@@ -99,7 +101,7 @@ class input {
     const PREG_IPV4 = '((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})(\.((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})){3}';
     const PREG_TIME = '([0-1]?[0-9]|2[0-3])(:[0-5]?[0-9]?){1,2}';
 
-    public static function Len (string $str, int $min = null, int $max = null): bool
+    public static function Len (string $str, ?int $min = null, ?int $max = null): bool
     {
         if (null === $min && null === $max) {
             throw new Exception('字符长度参数错误');
@@ -219,13 +221,17 @@ class input {
 
     /**
      * 过滤器
-     * $str 要过滤的字符
+     * $str 要过滤的字符(若为数组，则$others也需要是数组，保留在或不在$others中的值)
      * $flag 过滤标记或是正则表达式(匹配要保留的字符)
-     * $others 指定需要额外保留(NOT_xx 额外过滤)的字符(正则表达式的字符格式)
+     * $others 指定需要额外保留(NOT_xx 额外过滤)的字符(正则表达式的字符格式) (若为数组，保留在或不在$others中的值, 匹配不到则返回空字符串))
      * $encodes 指定需要编码的字符
      */
-    public static function Filter (string $str, int|string $flag = 0, string $others = '', array|bool $encodes = null): string
+    public static function Filter (string|array $str, int|string $flag = 0, string|array $others = '', null|array|bool $encodes = null): string | array
     {
+        if (is_array($str) ||is_array($others)) {
+            return self::FilterArray($str, $flag, $others);
+        }
+
         $preg = is_int($flag) ? match($flag) {
             self::NONE => false,
 
@@ -275,6 +281,104 @@ class input {
         }
         return $str;
     }
+    public static function FilterArray (string|array $str, int|string $flag = 0, string|array $others = [])
+    {
+        if (is_array($str)) {
+            $save = [];
+            switch ($flag) {
+                case self::NOTIN:
+                    foreach ($str as $s) {
+                        if (
+                            (is_array($others) && !in_array($s, $others)) ||
+                            $others !== $s
+                        ) {
+                            $save[] = $s;
+                        }
+                        // in_array($s, $others) || $save[] = $s;
+                    }
+                    break;
+                case self::NOTIN_UPPER:
+                    foreach ($str as $s) {
+                        $s = strtoupper($s);
+                        if (
+                            (is_array($others) && !in_array($s, $others)) ||
+                            $others !== $s
+                        ) {
+                            $save[] = $s;
+                        }
+                        // in_array($s, $others) || $save[] = $s;
+                    }
+                    break;
+                case self::NOTIN_LOWER:
+                    foreach ($str as $s) {
+                        $s = strtolower($s);
+                        if (
+                            (is_array($others) && !in_array($s, $others)) ||
+                            $others !== $s
+                        ) {
+                            $save[] = $s;
+                        }
+                        // in_array($s, $others) || $save[] = $s;
+                    }
+                    break;
+                case self::IN_UPPER:
+                    foreach ($str as $s) {
+                        $s = strtoupper($s);
+                        if (
+                            (is_array($others) && in_array($s, $others)) ||
+                            $others === $s
+                        ) {
+                            $save[] = $s;
+                        }
+                        // in_array($s, $others) && $save[] = $s;
+                    }
+                    break;
+                case self::IN_LOWER:
+                    foreach ($str as $s) {
+                        $s = strtolower($s);
+                        if (
+                            (is_array($others) && in_array($s, $others)) ||
+                            $others === $s
+                        ) {
+                            $save[] = $s;
+                        }
+                        // in_array($s, $others) && $save[] = $s;
+                    }
+                    break;
+                default:
+                    foreach ($str as $s) {
+                        if (
+                            (is_array($others) && in_array($s, $others)) ||
+                            $others === $s
+                        ) {
+                            $save[] = $s;
+                        }
+                        // in_array($s, $others) && $save[] = $s;
+                    }
+            }
+            return $save;
+        }
+
+        switch ($flag) {
+            case self::NOTIN:
+                return in_array($str, $others) ? '' : $str;
+            case self::NOTIN_UPPER:
+                $s = strtoupper($str);
+                return in_array($s, $others) ? '' : $s;
+            case self::NOTIN_LOWER:
+                $s = strtolower($str);
+                return in_array($s, $others) ? '' : $s;
+            case self::IN_UPPER:
+                $s = strtoupper($str);
+                return in_array($s, $others) ? $s : '';
+            case self::IN_LOWER:
+                $s = strtolower($str);
+                return in_array($s, $others) ? $s : '';
+            default:
+            return in_array($str, $others) ? $str : '';
+        }
+    }
+
     /**
      * 是否匹配
      * $str 要匹配的字符
@@ -313,6 +417,7 @@ class input {
                 self::ZH => !preg_match('/[^' . self::PREG_ZH . "{$others}]/u", $str),
                 self::VAR => !!preg_match('/^' . self::PREG_VAR . '$/', $str),
                 self::EMAIL => !!preg_match('/^' . self::PREG_EMAIL . '$/', $str),
+                self::URI => !!preg_match('/^' . self::PREG_URI . '$/', $str),
                 self::URL => !!preg_match('/^' . self::PREG_URL . '$/', $str),
                 self::AB_URL => !!preg_match('/^' . self::PREG_ABURL . '$/', $str),
                 self::LOCAL_URL => !!preg_match('/^' . self::PREG_LOCAL_URL . '$/', $str),
@@ -328,7 +433,7 @@ class input {
                 self::IPV4 => !!filter_var($str, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4),
                 self::IPV6 => !!filter_var($str, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6),
                 self::JSON => $others ? false !== ($str = json_decode($str, true)) : false !== json_decode($str, true),
-                default => throw new Exception('不能识别的过滤标记:' . $flag),
+                default => throw new Exception('不能识别的标记:' . $flag),
             };
         }
         return $others ? !preg_match($flag, $str) : !!preg_match($flag, $str);
@@ -367,6 +472,7 @@ class input {
             self::ZH => '/[' . self::ZH . "{$others}]/u",
             self::VAR => '/' . self::PREG_VAR . '/',
             self::EMAIL => '/' . self::PREG_EMAIL . '/',
+            self::URI => '/' . self::PREG_URI . '/',
             self::URL => '/' . self::PREG_URL . '/',
             self::AB_URL => '/' . self::PREG_ABURL . '/',
             self::LOCAL_URL => '/' . self::PREG_LOCAL_URL . '/',
@@ -382,7 +488,7 @@ class input {
         }
         return false;
     }
-    public static function ParseInt(string|int|bool|array $res, string $dim = '', callable $filter = null): int|array
+    public static function ParseInt(string|int|bool|array $res, string $dim = '', ?callable $filter = null): int|array
     {
         if (is_int($res)) {
             return $res;
@@ -406,7 +512,7 @@ class input {
         }
         return 0;
     }
-    public static function ParseFloat(string|array $res, string $dim = '', callable $filter = null): float|array
+    public static function ParseFloat(string|array $res, string $dim = '', ?callable $filter = null): float|array
     {
         if (is_float($res)) {
             return $res;
@@ -430,7 +536,7 @@ class input {
         }
         return 0;
     }
-    public static function ParseMoney($res, string $dim = '', callable $filter = null)
+    public static function ParseMoney($res, string $dim = '', ?callable $filter = null)
     {
         if (is_numeric($res)) {
             return $dim ? [(int)(100 * $res)] : (int)(100 * $res);
@@ -451,7 +557,7 @@ class input {
         }
         return 0;
     }
-    public static function ParseFixed($res, string $dim = '', callable $filter = null)
+    public static function ParseFixed($res, string $dim = '', ?callable $filter = null)
     {
         if (is_numeric($res)) {
             return $dim ? [(int)(10000 * $res)] : (int)(10000 * $res);
@@ -473,7 +579,7 @@ class input {
         return 0;
     }
 
-    public static function Get (string $key, string $dim = '', callable $filter = null): string|array|null
+    public static function Get (string $key, string $dim = '', ?callable $filter = null): string|array|null
     {
         if ($key) {
             if ($data = $_GET[$key] ?? null) {
@@ -484,19 +590,19 @@ class input {
         }
         return $data;
     }
-    public static function GetInt (string $key, string $dim = '', callable $filter = null): int|array|null
+    public static function GetInt (string $key, string $dim = '', ?callable $filter = null): int|array|null
     {
         return isset($_GET[$key]) ? self::ParseInt($_GET[$key], $dim, $filter) : null;
     }
-    public static function GetFloat (string $key, string $dim = '', callable $filter = null): float|array|null
+    public static function GetFloat (string $key, string $dim = '', ?callable $filter = null): float|array|null
     {
         return isset($_GET[$key]) ? self::ParseFloat($_GET[$key], $dim, $filter) : null;
     }
-    public static function GetFixed (string $key, string $dim = '', callable $filter = null): float|array|null
+    public static function GetFixed (string $key, string $dim = '', ?callable $filter = null): float|array|null
     {
         return isset($_GET[$key]) ? self::ParseFixed($_GET[$key], $dim, $filter) : null;
     }
-    public static function GetMoney (string $key, string $dim = '', callable $filter = null)
+    public static function GetMoney (string $key, string $dim = '', ?callable $filter = null)
     {
         return isset($_GET[$key]) ? self::ParseMoney($_GET[$key], $dim, $filter) : null;
     }
@@ -517,19 +623,19 @@ class input {
         }
         return is_string(ROUTE['params'][$key]) ? trim(ROUTE['params'][$key]) : ROUTE['params'][$key];
     }
-    public static function ParamInt (string $key, string $dim = '', callable $filter = null): int|array|null
+    public static function ParamInt (string $key, string $dim = '', ?callable $filter = null): int|array|null
     {
         return isset(ROUTE['params'][$key]) ? self::ParseInt(ROUTE['params'][$key], $dim, $filter) : null;
     }
-    public static function ParamFloat (string $key, string $dim = '', callable $filter = null): float|array|null
+    public static function ParamFloat (string $key, string $dim = '', ?callable $filter = null): float|array|null
     {
         return isset(ROUTE['params'][$key]) ? self::ParseFloat(ROUTE['params'][$key], $dim, $filter) : null;
     }
-    public static function ParamFixed (string $key, string $dim = '', callable $filter = null): float|array|null
+    public static function ParamFixed (string $key, string $dim = '', ?callable $filter = null): float|array|null
     {
         return isset(ROUTE['params'][$key]) ? self::ParseFixed(ROUTE['params'][$key], $dim, $filter) : null;
     }
-    public static function ParamMoney (string $key, string $dim = '', callable $filter = null)
+    public static function ParamMoney (string $key, string $dim = '', ?callable $filter = null)
     {
         return isset(ROUTE['params'][$key]) ? self::ParseMoney(ROUTE['params'][$key], $dim, $filter) : null;
     }
@@ -543,7 +649,7 @@ class input {
         return $toInt ? (int)$data : !!$data;
     }
 
-    public static function Query (string $key, string $dim = '', callable $filter = null): string|array|null
+    public static function Query (string $key, string $dim = '', ?callable $filter = null): string|array|null
     {
         if ($key) {
             $data = ROUTE['query'][$key] ?? null;
@@ -556,19 +662,19 @@ class input {
         is_string($data) && $data = trim($data);
         return $data;
     }
-    public static function QueryInt (string $key, string $dim = '', callable $filter = null): int|array|null
+    public static function QueryInt (string $key, string $dim = '', ?callable $filter = null): int|array|null
     {
         return isset(ROUTE['query'][$key]) ? self::ParseInt(ROUTE['query'][$key], $dim, $filter) : null;
     }
-    public static function QueryFloat (string $key, string $dim = '', callable $filter = null): float|array|null
+    public static function QueryFloat (string $key, string $dim = '', ?callable $filter = null): float|array|null
     {
         return isset(ROUTE['query'][$key]) ? self::ParseFloat(ROUTE['query'][$key], $dim, $filter) : null;
     }
-    public static function QueryFixed (string $key, string $dim = '', callable $filter = null): float|array|null
+    public static function QueryFixed (string $key, string $dim = '', ?callable $filter = null): float|array|null
     {
         return isset(ROUTE['query'][$key]) ? self::ParseFixed(ROUTE['query'][$key], $dim, $filter) : null;
     }
-    public static function QueryMoney (string $key, string $dim = '', callable $filter = null)
+    public static function QueryMoney (string $key, string $dim = '', ?callable $filter = null)
     {
         return isset(ROUTE['query'][$key]) ? self::ParseMoney(ROUTE['query'][$key], $dim, $filter) : null;
     }
@@ -581,7 +687,7 @@ class input {
         }
         return $toInt ? (int)$data : !!$data;
     }
-    protected static function split2array (string $str, string $dim, callable $filter = null): array
+    protected static function split2array (string $str, string $dim, ?callable $filter = null): array
     {
         $data = [];
         $data = explode($dim, $str);
@@ -595,7 +701,7 @@ class input {
         }
         return $data;
     }
-    public static function Path (int $index, string $dim = '', callable $filter = null): string|array|null
+    public static function Path (int $index, string $dim = '', ?callable $filter = null): string|array|null
     {
         if (0 > $index) {
             $data = ROUTE['path'] ?? null;
@@ -608,19 +714,19 @@ class input {
         is_string($data) && $data = trim($data);
         return $data;
     }
-    public static function PathInt (int $index, string $dim = '', callable $filter = null): int|array|null
+    public static function PathInt (int $index, string $dim = '', ?callable $filter = null): int|array|null
     {
         return isset(ROUTE['path'][$index]) ? self::ParseInt(ROUTE['path'][$index], $dim, $filter) : null;
     }
-    public static function PathFloat (int $index, string $dim = '', callable $filter = null): float|array|null
+    public static function PathFloat (int $index, string $dim = '', ?callable $filter = null): float|array|null
     {
         return isset(ROUTE['path'][$index]) ? self::ParseFloat(ROUTE['path'][$index], $dim, $filter) : null;
     }
-    public static function PathFixed (int $index, string $dim = '', callable $filter = null): float|array|null
+    public static function PathFixed (int $index, string $dim = '', ?callable $filter = null): float|array|null
     {
         return isset(ROUTE['path'][$index]) ? self::ParseFixed(ROUTE['path'][$index], $dim, $filter) : null;
     }
-    public static function PathMoney (string $key, string $dim = '', callable $filter = null)
+    public static function PathMoney (string $key, string $dim = '', ?callable $filter = null)
     {
         return isset(ROUTE['path'][$key]) ? self::ParseMoney(ROUTE['path'][$key], $dim, $filter) : null;
     }
@@ -634,7 +740,7 @@ class input {
         return $toInt ? (int)$data : !!$data;
     }
 
-    public static function Input (string $key, string $dim = '', callable $filter = null)
+    public static function Input (string $key, string $dim = '', ?callable $filter = null)
     {
         if ($key) {
             $data = match (METHOD) {
@@ -666,7 +772,7 @@ class input {
         is_string($data) && $data = trim($data);
         return $data;
     }
-    public static function InputInt (string $key, string $dim = '', callable $filter = null): int|array|null
+    public static function InputInt (string $key, string $dim = '', ?callable $filter = null): int|array|null
     {
         $data = match (METHOD) {
             'GET'=>$_GET[$key] ?? null,
@@ -675,7 +781,7 @@ class input {
         };
         return null === $data ? null : self::ParseInt($data, $dim, $filter);
     }
-    public static function InputFloat (string $key, string $dim = '', callable $filter = null): float|array|null
+    public static function InputFloat (string $key, string $dim = '', ?callable $filter = null): float|array|null
     {
         $data = match (METHOD) {
             'GET'=>$_GET[$key] ?? null,
@@ -684,7 +790,7 @@ class input {
         };
         return null === $data ? null : self::ParseFloat($data, $dim, $filter);
     }
-    public static function InputFixed (string $key, string $dim = '', callable $filter = null): float|array|null
+    public static function InputFixed (string $key, string $dim = '', ?callable $filter = null): float|array|null
     {
         $data = match (METHOD) {
             'GET'=>$_GET[$key] ?? null,
@@ -693,7 +799,7 @@ class input {
         };
         return null === $data ? null : self::ParseFixed($data, $dim, $filter);
     }
-    public static function InputMoney (string $key, string $dim = '', callable $filter = null)
+    public static function InputMoney (string $key, string $dim = '', ?callable $filter = null)
     {
         $data = match (METHOD) {
             'GET'=>$_GET[$key] ?? null,

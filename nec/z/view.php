@@ -79,7 +79,7 @@ class view
                     --$i;
                 }
                 $dir = implode('/', $parr) . "/{$match[3]}";
-            } elseif ($parent && '.' === $info['dirname'][0] && '/' === $info['dirname'][1]) {
+            } elseif ($parent && '.' === $info['dirname'][0]) {
                 $dir = $parent . substr($info['dirname'], 1);
             } else {
                 $arr = explode('/', $info['dirname']);
@@ -120,7 +120,7 @@ class view
                 $params = explode(',', $params);
                 foreach($params as $v) {
                     $p = explode(':', $v);
-                    $d[$p[0]] = $p[1] ?? null;
+                    $d[$p[0]] = $p[1] ?? '';
                 }
                 self::$TPLDOM[$file][$name][1] = $d;
             } else {
@@ -176,7 +176,6 @@ class view
                 $v = $attr->value ?: $n;
                 $key = '$' . $n;
                 if (!isset($item[1][$key]) && !isset($item[1][$n])) {
-                    // 为方便阅读, 需在被调用的模板中声明传入的参数名
                     throw new Exception("received param {$attr->name} was not specified: {$item[2]}[name={$item[3]}]; from {$file}");
                 }
                 $sets[] = "{$key} = {$v} ?? null";
@@ -195,18 +194,24 @@ class view
                 $name = $v->getAttribute('name');
                 $f = $v->getAttribute('file');
                 $tpl = $f ? self::GetTpl($f, $file) : $file;
-                $d = isset(self::$TPLDOM[$tpl]) ? $dom : self::getBlock($tpl);
+
+                if (isset(self::$TPLDOM[$tpl])) {
+                    $d = $dom;
+                } else {
+                    $d = self::getBlock($tpl);
+                    $replace[] = [$d, $tpl];
+                }
                 if (!isset(self::$TPLDOM[$tpl][$name])) {
                     throw new Exception("template tagName '{$name}' not exits : {$tpl}");
                 }
-                $replace[] = [$d, $tpl];
                 $sets[] = [$name, $tpl, $v, $dom];
-            }
-            foreach($sets as $v) {
-                self::setNodes($file, ...$v);
             }
             foreach($replace as $v) {
                 self::replaceTemplate(...$v);
+            }
+            // 两个循环的顺序问题：先循环$sets会导致嵌套导入时候无效
+            foreach($sets as $v) {
+                self::setNodes($file, ...$v);
             }
         }
     }

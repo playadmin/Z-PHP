@@ -18,7 +18,7 @@ class cache
     const TRY_USLEEP = 2000; // 尝试读取缓存的间隔(微秒)
     const TRY_EXPIRE = 30000; // 尝试读取缓存的超时时间(毫秒)
     private static $Z_REDIS, $Z_MEMCACHED;
-    public static function Redis(array $c = null, bool $new = false): Redis
+    public static function Redis(?array $c = null, bool $new = false): Redis
     {
         $c || $c = $GLOBALS['ZPHP_CONFIG']['REDIS'] ?? null;
         if (!$c) {
@@ -43,7 +43,7 @@ class cache
         }
         return self::$Z_REDIS[$key];
     }
-    public static function Memcached(array $c = null): \Memcached
+    public static function Memcached(?array $c = null): \Memcached
     {
         $c || $c = $GLOBALS['ZPHP_CONFIG']['MEMCACHED'] ?? null;
         if (!$c) {
@@ -114,7 +114,7 @@ class cache
      * @param lock 并发锁
      * @return 读取或写入的数据
      */
-    public static function R(string $key, $data = null, int $expire = null, bool $lock = false)
+    public static function R(string $key, $data = null, ?int $expire = null, bool $lock = false)
     {
         $redis = self::Redis();
         isset($expire) || $expire = $GLOBALS['ZPHP_CONFIG']['REDIS']['expire'] ?? 600;

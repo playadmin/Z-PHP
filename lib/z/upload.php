@@ -17,8 +17,8 @@ namespace lib\z;
 class upload
 {
     const ERROR_MSG = [
-        1 => '上传的文件超过了 PHP.ini 中 upload_max_filesize 选项限制的值',
-        2 => '上传文件的大小超过了 HTML 表单中 MAX_FILE_SIZE 选项指定的值',
+        1 => '上传的文件超过了 PHP.ini 中 upload_max_filesize 选项限制的值',
+        2 => '上传文件的大小超过了 HTML 表单中 MAX_FILE_SIZE 选项指定的值',
         3 => '文件只有部分被上传',
         4 => '没有文件被上传',
         6 => '找不到临时文件夹',
@@ -45,7 +45,7 @@ class upload
         $mapping = [], //上传文件信息的索引映射
         $info = []; //上传文件的信息
 
-    public function __construct(array $conf = null)
+    public function __construct(?array $conf = null)
     {
         if ($this->checkLength() && $conf) {
             $this->conf = $conf + $this->conf;
