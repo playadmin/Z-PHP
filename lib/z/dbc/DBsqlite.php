@@ -63,7 +63,7 @@ class DBsqlite extends db
         return $this->PRIKEYS[$table];
     }
 
-    protected function DB_lockRows (string $sql, int|bool $lockExpire = null): string|null
+    protected function DB_lockRows (string $sql, int|bool|null $lockExpire = null): string|null
     {
         return null;
     }
@@ -176,7 +176,7 @@ class DBsqlite extends db
     }
 
     // 存在数据则更新，否则就插入新数据
-    protected function DB_duplicate(array $insert, array $update = null): array|string|bool|int
+    protected function DB_duplicate(array $insert, ?array $update = null): array|string|bool|int
     {
         $table = $this->DB_table();
         if ($where = $this->exist($insert, $this->DB_TABLE, true)) {

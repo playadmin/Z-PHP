@@ -45,9 +45,11 @@ abstract class db
     $DB_TMP = '',
     $DB_SQLD = '';
 
+    protected bool $DB_NO_WHERE = false;
+
     public pdo $PDO;
 
-    public static function Init(string $table = '', array $c = null): static
+    public static function Init(string $table = '', ?array $c = null): static
     {
         $pdo = dbc::Init($c);
         $cfg = $pdo->GetConfig();
@@ -59,7 +61,7 @@ abstract class db
         $class = __NAMESPACE__ . '\\DB' . $cfg['drive'];
         return new $class($cfg, $pdo, $table, $key);
     }
-    public static function New (string $table = '', array $c = null, string $key = null): static
+    public static function New (string $table = '', ?array $c = null, ?string $key = null): static
     {
         $pdo = dbc::Init($c);
         $cfg = $pdo->GetConfig();
@@ -151,7 +153,7 @@ abstract class db
     {
         return $this->Insert($data, $ignore);
     }
-    public function IfInsert(array $insert, array $update = null)
+    public function IfInsert(array $insert, ?array $update = null)
     {
         return $this->IfUpdate($insert, $update);
     }
@@ -236,22 +238,22 @@ abstract class db
         $limit && $this->DB_LIMIT = (string)$limit;
         return $this;
     }
-    public function Where(null|string|array $where, array $bind = null): static
+    public function Where(null|string|array $where, ?array $bind = null): static
     {
         $where && $this->DB_WHERE[] = [$where, $bind];
         return $this;
     }
-    public function And(null|string|array $where, array $bind = null): static
+    public function And(null|string|array $where, ?array $bind = null): static
     {
         $where && $this->DB_WHERE[] = [$where, $bind, 'AND'];
         return $this;
     }
-    public function Or(null|string|array $where, array $bind = null): static
+    public function Or(null|string|array $where, ?array $bind = null): static
     {
         $where && $this->DB_WHERE[] = [$where, $bind, 'OR'];
         return $this;
     }
-    public function Having(string|array $having, array $bind = null): static
+    public function Having(string|array $having, ?array $bind = null): static
     {
         $having && $this->DB_HAVING = [$having, $bind];
         return $this;
@@ -261,7 +263,7 @@ abstract class db
         $join && (is_array($join) ? $this->DB_JOIN = array_merge($this->DB_JOIN, $join) : $this->DB_JOIN[] = $join);
         return $this;
     }
-    public function Chain(array $chain = null): static
+    public function Chain(?array $chain = null): static
     {
         $this->DB_CHAIN = $chain ?: [];
         return $this;
@@ -337,7 +339,7 @@ abstract class db
     abstract function PriKey (?string $table = null): array|string;
     abstract protected function DB_ApproximateRows (string $table): int; // 数据表总数据量的模糊值,非必要,无此功能的数据库可返回-1
     abstract protected function DB_lockRows (string $sql, ?int $lockExpire = null): string|null; // 锁定数据行,无此功能的数据库可直接返回参数$sql(返回null则会抛出异常)
-    abstract protected function DB_duplicate(array $insert, array $update = null): array|string|bool|int|null; // 有则更新，无则插入(返回null则会抛出异常)
+    abstract protected function DB_duplicate(array $insert, ?array $update = null): array|string|bool|int|null; // 有则更新，无则插入(返回null则会抛出异常)
     abstract protected function DB_dcount (string $from, string $sfield, string $field): int|false|null;// 去重统计(返回null则会抛出异常)
     abstract protected function DB_iinsert(string $table, array $data): stmt|false|null; // 插入数据, 已存在数据则不插入(返回null则会抛出异常)
     abstract protected function DB_ibatchInsert(array &$data): string|null; // 批量插入数据, 已存在数据则不插入(返回null则会抛出异常)
@@ -469,8 +471,8 @@ abstract class db
             $sqlc = $sql . $this->DB_sql();
             list($table, $key) = $this->CacheKey('2', $fetch, $sqlc);
             $pkey = "{$key}-p{$page['num']}";
-            $result = $this->GetCache($mod, $this->DB_CONFIG['dbname'], $table, $key);
-            $paged = $this->GetCache($mod, $this->DB_CONFIG['dbname'], $table, $pkey);
+            $result = $this->GetCache($table, $key, $this->DB_CONFIG['dbname'], $mod);
+            $paged = $this->GetCache($table, $this->DB_CONFIG['dbname'], $pkey, $mod);
             if (null === $result || !$paged) {
                 $res = $this->SetCache($table, $key, function () use ($sql, $fetch, $mod, $table, $pkey, $expire) {
                     $this->DB_page();
@@ -572,7 +574,7 @@ abstract class db
     public function Update(array $data, bool $call = true): int|false
     {
         $table = $this->DB_table();
-        $where = $this->DB_WHERE ? $this->DB_sqlWhere() : '';
+        $where = $this->DB_sqlWhere();
         $join = $this->DB_JOIN ? $this->DB_sqlJoin() : '';
         if (!$sql = $this->DB_bindData($data, 0)) {
             return false;
@@ -585,7 +587,7 @@ abstract class db
         return $result;
     }
 
-    public function IfUpdate(array $insert, array $update = null, bool $call = true): string|bool|int
+    public function IfUpdate(array $insert, ?array $update = null, bool $call = true): string|bool|int
     {
         $result = $this->DB_duplicate($insert, $update);
         if (null === $result) {
@@ -616,7 +618,7 @@ abstract class db
     {
         $alias && $alias = " {$alias}";
         $table = $this->DB_table();
-        $where = $this->DB_WHERE ? $this->DB_sqlWhere() : '';
+        $where = $this->DB_sqlWhere();
         $join = $this->DB_JOIN ? $this->DB_sqlJoin() : '';
         $sql = "DELETE{$alias} FROM {$table}{$join}{$where}";
         $q = $this->PDO->Stmt($sql, $this->DB_BIND);
@@ -716,6 +718,7 @@ abstract class db
         $this->DB_SQLD = '';
         $this->DB_MERGE = '';
         $this->DB_CHAIN = [];
+        $this->DB_NO_WHERE = false;
     }
 
     protected function DB_field(): string
@@ -861,7 +864,7 @@ abstract class db
         if ($r || !$this->DB_SQLD) {
             $table = $this->DB_table();
             $join = $this->DB_JOIN ? $this->DB_sqlJoin() : '';
-            $where = $this->DB_WHERE ? $this->DB_sqlWhere() : '';
+            $where = $this->DB_sqlWhere();
             $having = $this->DB_HAVING ? $this->DB_sqlHaving() : '';
             $group = $this->DB_GROUP ? " GROUP BY {$this->DB_GROUP}" : '';
             $limit = !$count && $this->DB_LIMIT ? " LIMIT {$this->DB_LIMIT}" : '';
@@ -912,6 +915,16 @@ abstract class db
 
     protected function DB_sqlWhere(): string
     {
+        if (!$this->DB_NO_WHERE) {
+            if (!$this->DB_WHERE) {
+                throw new Exception('Dangerous operation, if indeed no Where condition, please explicitly specify ->Where (\'ALL\')');
+            }
+            if (is_string($this->DB_WHERE[0][0]) && 'ALL' === $this->DB_WHERE[0][0]) {
+                unset($this->DB_WHERE[0]);
+                $this->DB_NO_WHERE = true;
+            }
+        }
+
         if ($this->DB_WHERE && !$this->DB_WHERED) {
             $sql = '';
             foreach ($this->DB_WHERE as $where) {
@@ -965,9 +978,6 @@ abstract class db
             $logic || $logic = 'AND ';
             $lc || $lc = $logic;
             if (is_array($value)) {
-                if (!$value) {
-                    continue;
-                }
                 if (is_string($value[0]) && 'SELECT' === strtoupper(substr($value[0], 0, 6))) {
                     // 包含子查询
                     $operator || $operator = 'IN';

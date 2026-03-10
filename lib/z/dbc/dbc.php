@@ -136,7 +136,7 @@ class pdo {
         return $this->instanceMap[$c['__key']];
     }
 
-    public function Retry (\PDOException $e, array $bind = null): bool
+    public function Retry (\PDOException $e, ?array $bind = null): bool
     {
         if ($this->isTry) {
             throw $e;
