@@ -64,7 +64,7 @@ class DBmysql extends db
         return $this->PRIKEYS[$table];
     }
 
-    protected function DB_lockRows (string $sql, int|bool $lockExpire = null): string
+    protected function DB_lockRows (string $sql, int|bool|null $lockExpire = null): string
     {
         is_int($lockExpire) && $lockExpire > 0 && $this->PDO->Query("set @@innodb_lock_wait_timeout = {$lockExpire}");
         return $lockExpire ? "{$sql} FOR UPDATE" : $sql;
@@ -96,7 +96,7 @@ class DBmysql extends db
     }
 
     // 存在数据则更新，否则就插入新数据
-    protected function DB_duplicate(array $insert, array $update = null): array|string|bool|int
+    protected function DB_duplicate(array $insert, ?array $update = null): array|string|bool|int
     {
         // 不支持的情况下可查询主键是否存在: $this->PriKey($this->DB_TABLE)
         $table = $this->DB_table();
